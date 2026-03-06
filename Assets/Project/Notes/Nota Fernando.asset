@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9188c642699f0648b9a80a9d1b3bb46, type: 3}
+  m_Name: Nota Fernando
+  m_EditorClassIdentifier: 
+  noteId: Nota Fernando
+  title: Fernando
+  content: "Eu falhei ao tentar salva-la desse hospicio....desse lugar amaldi\xE7oado...aquelas
+    criaturas n\xE3o s\xE3o reais...n\xE3o pode ser....monica minha filha eu sinto
+    muito por n\xE3o conseguir salva-la, n\xE3o consegui chegar nem at\xE9 seu dormitorio
+    para ler suas ultimas palavras....aquela criatura sugou toda minha energia e
+    eu mal cheguei at\xE9 a saida....morrerei contigo minha filha. "
+  backgroundSprite: {fileID: 21300000, guid: e245c3adbd928f44abdc5a3a34d13881, type: 3}
+  backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  backgroundPrefab3D: {fileID: 0}
+  lines:
+  - text: "Eu falhei ao tentar salva-la desse hospicio....desse lugar amaldi\xE7oado...aquelas
+      criaturas n\xE3o s\xE3o reais...n\xE3o pode ser....monica minha filha eu sinto
+      muito por n\xE3o conseguir salva-la, n\xE3o consegui chegar nem at\xE9 seu
+      dormitorio para ler suas ultimas palavras....aquela criatura sugou toda minha
+      energia e eu mal cheguei at\xE9 a saida....morrerei contigo minha filha. "
+    kind: 0
+  speechColor: {r: 1, g: 1, b: 1, a: 1}
+  thoughtColor: {r: 1, g: 1, b: 1, a: 0.9}
+  thoughtItalic: 1
+  hasAfterReadingLine: 1
+  afterReadingLine:
+    text: "Bom...Ent\xE3o eu preciso encontrar esse diario nos pertences da Monica"
+    kind: 1
