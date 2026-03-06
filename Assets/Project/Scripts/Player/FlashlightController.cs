@@ -82,7 +82,7 @@ public class FlashlightController : MonoBehaviour
         transform.localPosition = localOffset;
     }
 
-    // ================= INPUT =======================aaa
+    // ================= INPUT =======================
 
     private void HandleInput()
     {
