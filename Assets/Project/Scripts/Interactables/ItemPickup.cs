@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Tipo de item que este pickup representa
 public enum ItemType
 {
     Battery,
@@ -9,83 +8,55 @@ public enum ItemType
 }
 
 [RequireComponent(typeof(Collider))]
-public class ItemPickup : MonoBehaviour
+public class ItemPickup : MonoBehaviour, IPickup
 {
-    [Header("ConfiguraÁ„o do Item")]
+    [Header("Configura√ß√£o do Item")]
     public ItemType itemType = ItemType.Battery;
 
     [Tooltip("Nome/ID da chave (ex: 'ChaveDiretoria', 'ChaveLaboratorio')")]
     public string keyId;
 
-    [Tooltip("Quantidade de pilhas que este item d· (para Battery)")]
+    [Tooltip("Quantidade de pilhas que este item d√° (para Battery)")]
     public int batteryAmount = 1;
 
-    [Tooltip("ReferÍncia ‡ nota que ser· adicionada ao di·rio (para Note)")]
+    [Tooltip("Refer√™ncia √† nota que ser√° adicionada ao di√°rio (para Note)")]
     public NoteData noteData;
 
-    [Header("InteraÁ„o")]
-    [Tooltip("Mensagem sÛ para debug")]
+    [Header("Intera√ß√£o")]
+    [Tooltip("Mensagem s√≥ para debug")]
     public string displayName = "Item";
 
-    [SerializeField] private bool usarControle = false;
-    [SerializeField] private string interactButton = "Submit"; // se quiser usar bot„o do controle depois
-
-    private bool playerInRange = false;
     private PlayerInventory playerInventory;
 
     private void Reset()
     {
-        // Garante que o collider È gatilho
         Collider col = GetComponent<Collider>();
         col.isTrigger = true;
     }
 
-    private void OnTriggerEnter(Collider other)
+    // Chamado pelo sistema de highlight (opcional, se quiser highlight visual)
+    public void SetHighlight(bool state)
     {
-        if (other.CompareTag("Player"))
-        {
-            playerInRange = true;
-            playerInventory = other.GetComponent<PlayerInventory>();
-
-            if (playerInventory == null)
-            {
-                Debug.LogWarning("[ItemPickup] Player n„o tem PlayerInventory!");
-            }
-            else
-            {
-                Debug.Log("[ItemPickup] Player entrou na ·rea de " + displayName);
-            }
-        }
+        // Aqui voc√™ pode ativar/desativar highlight visual se quiser
+        Debug.Log("[ItemPickup] Highlight " + (state ? "ativado" : "desativado") + " para: " + displayName);
     }
 
-    private void OnTriggerExit(Collider other)
+    public void Collect()
     {
-        if (other.CompareTag("Player"))
+        // Busca o invent√°rio do player na cena
+        if (playerInventory == null)
         {
-            playerInRange = false;
-            playerInventory = null;
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+                playerInventory = player.GetComponent<PlayerInventory>();
         }
-    }
 
-    private void Update()
-    {
-        if (!playerInRange || playerInventory == null)
+        if (playerInventory == null)
+        {
+            Debug.LogWarning("[ItemPickup] PlayerInventory n√£o encontrado!");
             return;
-
-        // Teclado: tecla E
-        bool interactKey = Input.GetKeyDown(KeyCode.E);
-
-        // Controle: bot„o configurado no Input Manager (Submit), se quiser ativar
-        bool interactButtonPressed = usarControle && Input.GetButtonDown(interactButton);
-
-        if (interactKey || interactButtonPressed)
-        {
-            Pickup();
         }
-    }
 
-    private void Pickup()
-    {
         switch (itemType)
         {
             case ItemType.Battery:
@@ -101,7 +72,7 @@ public class ItemPickup : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning("[ItemPickup] keyId est· vazio para um item do tipo Key.");
+                    Debug.LogWarning("[ItemPickup] keyId est√° vazio para um item do tipo Key.");
                 }
                 break;
 
@@ -113,12 +84,11 @@ public class ItemPickup : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning("[ItemPickup] noteData n„o atribuÌdo para um item do tipo Note.");
+                    Debug.LogWarning("[ItemPickup] noteData n√£o atribu√≠do para um item do tipo Note.");
                 }
                 break;
         }
 
-        // Depois de pegar, some da cena
         Destroy(gameObject);
     }
 }

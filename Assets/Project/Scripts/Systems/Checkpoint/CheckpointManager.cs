@@ -5,7 +5,7 @@ public class CheckPointManager : MonoBehaviour
 {
     public static CheckPointManager Instance { get; private set; }
 
-    [Header("ReferÍncias do Player")]
+    [Header("Refer√™ncias do Player")]
     [SerializeField] private Transform playerTransform;
     [SerializeField] private CharacterController playerController;
     [SerializeField] private PlayerInventory playerInventory;
@@ -14,14 +14,15 @@ public class CheckPointManager : MonoBehaviour
     [SerializeField] private bool hasCheckpoint = false;
     [SerializeField] private Vector3 checkpointPosition;
 
-    [Header("Invent·rio salvo no Checkpoint")]
+    [Header("Invent√°rio salvo no Checkpoint")]
     [SerializeField] private int checkpointBatteryCount = 0;
+    [SerializeField] private int checkpointAmmoCount = 0;
     [SerializeField] private List<string> checkpointKeys = new List<string>();
     [SerializeField] private List<NoteData> checkpointNotes = new List<NoteData>();
 
     private void Awake()
     {
-        // Singleton simples (opcional, mas ˙til se quiser acessar por Instance)
+        // Singleton simples (opcional, mas √∫til se quiser acessar por Instance)
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -29,7 +30,7 @@ public class CheckPointManager : MonoBehaviour
         }
         Instance = this;
 
-        // Tenta achar referÍncias automaticamente se n„o estiverem setadas no Inspector
+        // Tenta achar refer√™ncias automaticamente se n√£o estiverem setadas no Inspector
         if (playerTransform == null || playerController == null || playerInventory == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -49,7 +50,7 @@ public class CheckPointManager : MonoBehaviour
 
     private void Start()
     {
-        // Se quiser que o ponto inicial da fase j· seja um checkpoint,
+        // Se quiser que o ponto inicial da fase j√° seja um checkpoint,
         // basta descomentar este bloco:
 
         if (playerTransform != null)
@@ -57,19 +58,19 @@ public class CheckPointManager : MonoBehaviour
             checkpointPosition = playerTransform.position;
             SaveInventorySnapshot();
             hasCheckpoint = true;
-            Debug.Log("[Checkpoint] Checkpoint inicial salvo na posiÁ„o de spawn.");
+            Debug.Log("[Checkpoint] Checkpoint inicial salvo na posi√ß√£o de spawn.");
         }
     }
 
     /// <summary>
-    /// Salva posiÁ„o + invent·rio atual do player como novo checkpoint.
-    /// Chamada pelo SavePoint ou por sistemas de histÛria.
+    /// Salva posi√ß√£o + invent√°rio atual do player como novo checkpoint.
+    /// Chamada pelo SavePoint ou por sistemas de hist√≥ria.
     /// </summary>
     public void SetCheckpoint(Vector3 pos)
     {
         if (playerTransform == null || playerInventory == null)
         {
-            Debug.LogWarning("[Checkpoint] ReferÍncias do player n„o configuradas.");
+            Debug.LogWarning("[Checkpoint] Refer√™ncias do player n√£o configuradas.");
             return;
         }
 
@@ -77,36 +78,40 @@ public class CheckPointManager : MonoBehaviour
         SaveInventorySnapshot();
         hasCheckpoint = true;
 
-        Debug.Log("[Checkpoint] Novo checkpoint salvo na posiÁ„o: " + pos);
+        Debug.Log("[Checkpoint] Novo checkpoint salvo na posi√ß√£o: " + pos);
     }
 
     /// <summary>
-    /// Guarda um "snapshot" do invent·rio atual.
+    /// Guarda um "snapshot" do invent√°rio atual.
     /// </summary>
     private void SaveInventorySnapshot()
     {
         if (playerInventory == null)
         {
-            Debug.LogWarning("[Checkpoint] PlayerInventory n„o atribuÌdo.");
+            Debug.LogWarning("[Checkpoint] PlayerInventory n√£o atribu√≠do.");
             return;
         }
 
         // Pilhas
         checkpointBatteryCount = playerInventory.GetBatteryCount();
 
-        // Chaves (cÛpia da lista, para n„o ficar apontando pro mesmo objeto)
+        // Muni√ß√£o
+        checkpointAmmoCount = playerInventory.GetAmmoCount();
+
+        // Chaves (c√≥pia da lista, para n√£o ficar apontando pro mesmo objeto)
         checkpointKeys = new List<string>(playerInventory.GetAllKeys());
 
-        // Notas (tambÈm faz cÛpia da lista ñ os NoteData em si s„o assets)
+        // Notas (tamb√©m faz c√≥pia da lista ‚Äì os NoteData em si s√£o assets)
         checkpointNotes = new List<NoteData>(playerInventory.GetAllNotes());
 
-        Debug.Log("[Checkpoint] Snapshot de invent·rio salvo. Pilhas: "
-                  + checkpointBatteryCount + " | Chaves: " + checkpointKeys.Count
+        Debug.Log("[Checkpoint] Snapshot de invent√°rio salvo. Pilhas: "
+                  + checkpointBatteryCount + " | Muni√ß√£o: " + checkpointAmmoCount
+                  + " | Chaves: " + checkpointKeys.Count
                   + " | Notas: " + checkpointNotes.Count);
     }
 
     /// <summary>
-    /// Teleporta o player para o ˙ltimo checkpoint e restaura o invent·rio
+    /// Teleporta o player para o √∫ltimo checkpoint e restaura o invent√°rio
     /// exatamente como estava na hora do save.
     /// </summary>
     public void ReturnToLastCheckpoint()
@@ -119,7 +124,7 @@ public class CheckPointManager : MonoBehaviour
 
         if (playerTransform == null || playerController == null || playerInventory == null)
         {
-            Debug.LogWarning("[Checkpoint] ReferÍncias do player n„o configuradas.");
+            Debug.LogWarning("[Checkpoint] Refer√™ncias do player n√£o configuradas.");
             return;
         }
 
@@ -130,17 +135,18 @@ public class CheckPointManager : MonoBehaviour
         // Teleporta o player
         playerTransform.position = checkpointPosition;
 
-        // Restaura invent·rio completo
+        // Restaura invent√°rio completo
         playerInventory.LoadInventoryState(
             checkpointBatteryCount,
             checkpointKeys,
-            checkpointNotes
+            checkpointNotes,
+            checkpointAmmoCount
         );
 
         // Religa o CharacterController
         playerController.enabled = controllerWasEnabled;
 
-        Debug.Log("[Checkpoint] Player retornou ao ˙ltimo checkpoint. Invent·rio restaurado.");
+        Debug.Log("[Checkpoint] Player retornou ao √∫ltimo checkpoint. Invent√°rio restaurado.");
     }
 
     /// <summary>
@@ -152,6 +158,7 @@ public class CheckPointManager : MonoBehaviour
         checkpointKeys.Clear();
         checkpointNotes.Clear();
         checkpointBatteryCount = 0;
+        checkpointAmmoCount = 0;
 
         Debug.Log("[Checkpoint] Dados de checkpoint limpos.");
     }

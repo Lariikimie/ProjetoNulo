@@ -275,23 +275,31 @@ public class InventoryUI : MonoBehaviour
         Debug.Log($"[InventoryUI] Slot atual index={currentIndex}, tipo={slot.ItemType}");
 
         switch (slot.ItemType)
-        {
-            case HotbarItemType.Battery:
-                UseBatteryFromSlot(slot);
-                break;
+{
+    case HotbarItemType.Battery:
+        UseBatteryFromSlot(slot);
+        break;
 
-            case HotbarItemType.Notes:
-                slot.OpenNotePanelFromSlot();
-                break;
+    case HotbarItemType.Health:
+        bool used = playerInventory.UseHealthItem();
+        if (!used)
+            Debug.Log("[InventoryUI] Tentativa de usar cura, mas não há itens de cura.");
+        else
+            slot.UpdateQuantity(playerInventory.GetHealthItemCount());
+        break;
 
-            case HotbarItemType.NotesCamera:
-                slot.OpenNoteCineFromSlot();
-                break;
+    case HotbarItemType.Notes:
+        slot.OpenNotePanelFromSlot();
+        break;
 
-            default:
-                Debug.Log("[InventoryUI] Slot sem item configurado (ItemType=None ou outro).");
-                break;
-        }
+    case HotbarItemType.NotesCamera:
+        slot.OpenNoteCineFromSlot();
+        break;
+
+    default:
+        Debug.Log("[InventoryUI] Slot sem item configurado (ItemType=None ou outro).");
+        break;
+}
     }
 
     private void UseBatteryFromSlot(HotbarSlotUI slot)

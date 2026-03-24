@@ -28,30 +28,29 @@ public class PlayerStats : MonoBehaviour
         }
     }
 
-    private void Die()
+    public void AddHealth(int amount)
     {
-        isDead = true;
-        Debug.Log("Player morreu!");
-
-        // Aqui depois você pode:
-        // - Desabilitar movimento
-        // - Tocar animação de morte
-        // - Chamar tela de Game Over
-        // Por enquanto vamos só logar.
-    }
-
-    public int GetCurrentHealth()
-    {
-        return currentHealth;
-    }
-
-    public int GetMaxHealth()
-    {
-        return maxHealth;
+        if (isDead) return;
+        currentHealth += amount;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        Debug.Log("Player curado. HP atual: " + currentHealth);
     }
 
     public float GetHealthPercent()
     {
-        return (float)currentHealth / maxHealth;
+        return (float)currentHealth / (float)maxHealth;
     }
+
+    private void Die()
+    {
+        isDead = true;
+        Debug.Log("Player morreu!");
+        // Aqui depois vocÃª pode:
+        // - Desabilitar movimento
+        // - Tocar animaÃ§Ã£o de morte
+        // - Chamar tela de Game Over
+    }
+
+    public int CurrentHealth => currentHealth;
+    public int MaxHealth => maxHealth;
 }

@@ -2,23 +2,22 @@ using UnityEngine;
 
 public class NoteWorldView : MonoBehaviour
 {
-    [Header("Dados")]
-    [Tooltip("Qual NoteData essa nota 3D representa.")]
-    [SerializeField] private NoteData noteData;
+    [Header("ReferÃªncia visual")]
+    [Tooltip("Renderer do squad 3D que exibe a textura da nota.")]
+    [SerializeField] private Renderer squadRenderer;
 
-    [Header("Ponto de câmera")]
-    [Tooltip("Transform com a posição/rotação ideais para a câmera ver essa nota. Se deixar vazio, usa o próprio transform.")]
-    [SerializeField] private Transform cameraPoint;
-
-    public NoteData NoteData => noteData;
-    public Transform CameraPoint => cameraPoint != null ? cameraPoint : transform;
-
-    private void OnDrawGizmos()
+    // Troca a textura do squad para a da nota recebida
+    public void SetNoteVisual(NoteData note)
     {
-        if (CameraPoint == null) return;
-
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(CameraPoint.position, 0.1f);
-        Gizmos.DrawLine(CameraPoint.position, CameraPoint.position + CameraPoint.forward * 0.5f);
+        if (note == null || squadRenderer == null) return;
+        if (note.backgroundSprite != null)
+        {
+            squadRenderer.material.mainTexture = note.backgroundSprite.texture;
+            Debug.Log("[NoteWorldView] Textura trocada para: " + note.backgroundSprite.name);
+        }
+        else
+        {
+            Debug.LogWarning("[NoteWorldView] NoteData sem backgroundSprite!");
+        }
     }
 }

@@ -9,11 +9,11 @@ TagManager:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Inspectable
   - Water
   - UI
-  - 
-  - 
+  - Pickup
+  - HintTrigger
   - Walls
   - 
   - 

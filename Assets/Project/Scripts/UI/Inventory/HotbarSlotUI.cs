@@ -6,25 +6,27 @@ public enum HotbarItemType
 {
     None,
     Battery,
-    Notes,        // abre NoteViewerUI (painel de texto)
-    NotesCamera   // abre Cinemachine na ·rea de notas (slot 4)
+    Ammo,      // novo tipo para muni√ß√£o
+    Health,    // novo tipo para cura/vida
+    Notes,
+    NotesCamera
 }
 
 public class HotbarSlotUI : MonoBehaviour
 {
-    [Header("ConfiguraÁ„o do slot")]
+    [Header("Configura√ß√£o do slot")]
     [SerializeField] private HotbarItemType itemType = HotbarItemType.None;
     [SerializeField] private string displayName = "Item";
 
     [Header("Dados de nota (apenas se ItemType = Notes)")]
-    [Tooltip("Se quiser que este slot abra SEMPRE uma nota especÌfica (no NoteViewerUI), arraste aqui. Se deixar vazio, ele abre a primeira nota do invent·rio.")]
+    [Tooltip("Se quiser que este slot abra SEMPRE uma nota espec√≠fica (no NoteViewerUI), arraste aqui. Se deixar vazio, ele abre a primeira nota do invent√°rio.")]
     [SerializeField] private NoteData fixedNote;
 
     [Header("Sistema de notas (NoteViewerUI)")]
     [Tooltip("Arraste aqui o NoteViewerUI (para ItemType = Notes).")]
     [SerializeField] private NoteViewerUI noteViewerUI;
 
-    [Header("ReferÍncias visuais")]
+    [Header("Refer√™ncias visuais")]
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private TMP_Text quantityText;
     [SerializeField] private Image selectionHighlight;
@@ -36,15 +38,17 @@ public class HotbarSlotUI : MonoBehaviour
         if (nameText != null)
             nameText.text = displayName;
         else
-            Debug.LogWarning("[HotbarSlotUI] nameText n„o atribuÌdo no slot: " + gameObject.name);
+            Debug.LogWarning("[HotbarSlotUI] nameText n√£o atribu√≠do no slot: " + gameObject.name);
 
         UpdateQuantity(0);
         SetSelected(false);
     }
 
     /// <summary>
-    /// Atualiza quantidade a partir do invent·rio lÛgico.
-    /// Battery -> n˙mero de pilhas
+    /// Atualiza quantidade a partir do invent√°rio l√≥gico.
+    /// Battery -> n√∫mero de pilhas
+    /// Ammo    -> n√∫mero de muni√ß√£o
+    /// Health  -> vida atual do player
     /// Notes / NotesCamera   -> quantidade de notas
     /// </summary>
     public void RefreshFromInventory(PlayerInventory inv)
@@ -63,7 +67,14 @@ public class HotbarSlotUI : MonoBehaviour
             case HotbarItemType.Battery:
                 qty = inv.GetBatteryCount();
                 break;
-
+            case HotbarItemType.Ammo:
+                qty = inv.GetAmmoCount();
+                break;
+            case HotbarItemType.Health:
+                // Busca o PlayerStats no mesmo GameObject do PlayerInventory
+                PlayerStats stats = inv.GetComponent<PlayerStats>();
+                qty = stats != null ? stats.CurrentHealth : 0;
+                break;
             case HotbarItemType.Notes:
             case HotbarItemType.NotesCamera:
                 qty = inv.GetAllNotes().Count;
@@ -88,50 +99,50 @@ public class HotbarSlotUI : MonoBehaviour
     public NoteData GetNoteData() => fixedNote;
 
     /// <summary>
-    /// Chamado pelo InventoryUI quando o slot atual È do tipo Notes (UI de texto).
-    /// O prÛprio slot sabe como abrir o NoteViewerUI.
+    /// Chamado pelo InventoryUI quando o slot atual √© do tipo Notes (UI de texto).
+    /// O pr√≥prio slot sabe como abrir o NoteViewerUI.
     /// </summary>
     public void OpenNotePanelFromSlot()
     {
         if (itemType != HotbarItemType.Notes)
         {
-            Debug.Log("[HotbarSlotUI] OpenNotePanelFromSlot chamado em slot que n„o È Notes: " + gameObject.name);
+            Debug.Log("[HotbarSlotUI] OpenNotePanelFromSlot chamado em slot que n√£o √© Notes: " + gameObject.name);
             return;
         }
 
         if (noteViewerUI == null)
         {
-            Debug.LogWarning("[HotbarSlotUI] noteViewerUI N√O atribuÌdo no slot de notas (UI): " + gameObject.name +
+            Debug.LogWarning("[HotbarSlotUI] noteViewerUI N√ÉO atribu√≠do no slot de notas (UI): " + gameObject.name +
                              ". Arraste o objeto que tem o NoteViewerUI aqui no Inspector.");
             return;
         }
 
         Debug.Log("[HotbarSlotUI] Abrindo painel de notas (UI) a partir do slot: " + gameObject.name +
-                  ". fixedNote=" + (fixedNote != null ? fixedNote.title : "null (usar primeira nota do invent·rio)"));
+                  ". fixedNote=" + (fixedNote != null ? fixedNote.title : "null (usar primeira nota do invent√°rio)"));
 
-        // Se fixedNote for null, o NoteViewerUI.ShowNote(null) abre a primeira nota do invent·rio.
+        // Se fixedNote for null, o NoteViewerUI.ShowNote(null) abre a primeira nota do invent√°rio.
         noteViewerUI.ShowNote(fixedNote);
     }
 
     /// <summary>
-    /// Chamado pelo InventoryUI quando o slot atual È do tipo NotesCamera (slot 4).
-    /// Usa o NoteCineController para ativar a Cinemachine da ·rea de notas.
+    /// Chamado pelo InventoryUI quando o slot atual √© do tipo NotesCamera (slot 4).
+    /// Usa o NoteCineController para ativar a Cinemachine da √°rea de notas.
     /// </summary>
     public void OpenNoteCineFromSlot()
     {
         if (itemType != HotbarItemType.NotesCamera)
         {
-            Debug.Log("[HotbarSlotUI] OpenNoteCineFromSlot chamado em slot que n„o È NotesCamera: " + gameObject.name);
+            Debug.Log("[HotbarSlotUI] OpenNoteCineFromSlot chamado em slot que n√£o √© NotesCamera: " + gameObject.name);
             return;
         }
 
         if (NoteCineController.Instance == null)
         {
-            Debug.LogWarning("[HotbarSlotUI] NoteCineController.Instance È nulo. Verifique se existe um NoteCineController na cena.");
+            Debug.LogWarning("[HotbarSlotUI] NoteCineController.Instance √© nulo. Verifique se existe um NoteCineController na cena.");
             return;
         }
 
-        Debug.Log("[HotbarSlotUI] Abrindo ·rea de notas (Cinemachine) a partir do slot: " + gameObject.name);
+        Debug.Log("[HotbarSlotUI] Abrindo √°rea de notas (Cinemachine) a partir do slot: " + gameObject.name);
         NoteCineController.Instance.ShowNoteArea();
     }
 }

@@ -15,6 +15,9 @@ public class HintTrigger : MonoBehaviour
     [Tooltip("Texto da dica (Text_Hint - TextMeshProUGUI).")]
     [SerializeField] private TMP_Text hintText;
 
+    // Contador de colliders do Player dentro do trigger
+    private int playerCollidersInside = 0;
+
     private void Reset()
     {
         // Tenta achar automaticamente (só funciona se o painel estiver ATIVO na cena)
@@ -45,15 +48,24 @@ public class HintTrigger : MonoBehaviour
         if (!other.CompareTag("Player"))
             return;
 
-        ShowHint();
+        playerCollidersInside++;
+        if (playerCollidersInside == 1)
+        {
+            ShowHint();
+        }
     }
 
-    private void OnTriggerExit(Collider other)
-    {
-        if (!other.CompareTag("Player"))
-            return;
+     private void OnTriggerExit(Collider other)
+     {
+         if (!other.CompareTag("Player"))
+             return;
 
-        HideHint(); // 🔥 sempre desativa o painel ao sair
+        playerCollidersInside--;
+         if (playerCollidersInside <= 0)
+        {
+            playerCollidersInside = 0;
+             HideHint(); // 🔥 só desativa quando TODOS os colliders saírem
+        }
     }
 
     private void ShowHint()

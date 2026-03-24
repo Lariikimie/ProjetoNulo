@@ -1,30 +1,31 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Este script guarda o invent·rio lÛgico do jogador:
-// - Quantidade de pilhas
-// - Lista de chaves
-// - Lista de notas (NoteData)
 public class PlayerInventory : MonoBehaviour
 {
     [Header("Pilhas (Bateria extra)")]
     [SerializeField] private int batteryCount = 0;
 
+    [Header("Muni√ß√£o")]
+    [SerializeField] private int ammoCount = 0;
+    [SerializeField] private int maxAmmo = 30;
+
+    [Header("Itens de Cura")]
+    [SerializeField] private int healthItemCount = 0;
+
     [Header("Chaves")]
     [SerializeField] private List<string> keys = new List<string>();
 
-    [Header("Notas (Di·rio)")]
+    [Header("Notas (Di√°rio)")]
     [SerializeField] private List<NoteData> notes = new List<NoteData>();
 
     // ==== PILHAS =====================================================
-
     public void AddBattery(int amount)
     {
         batteryCount += amount;
         if (batteryCount < 0)
             batteryCount = 0;
-
-        Debug.Log("[Invent·rio] Pilhas: " + batteryCount);
+        Debug.Log("[Invent√°rio] Pilhas: " + batteryCount);
     }
 
     public bool UseBattery(int amount = 1)
@@ -32,91 +33,106 @@ public class PlayerInventory : MonoBehaviour
         if (batteryCount >= amount)
         {
             batteryCount -= amount;
-            Debug.Log("[Invent·rio] Usou pilha. Restam: " + batteryCount);
+            Debug.Log("[Invent√°rio] Usou pilha. Restam: " + batteryCount);
             return true;
         }
-
-        Debug.Log("[Invent·rio] Tentou usar pilha, mas n„o tem suficientes.");
+        Debug.Log("[Invent√°rio] Tentou usar pilha, mas n√£o tem suficientes.");
         return false;
     }
 
-    public int GetBatteryCount()
+    public int GetBatteryCount() => batteryCount;
+
+    // ==== MUNI√á√ÉO =====================================================
+    public void AddAmmo(int amount)
     {
-        return batteryCount;
+        ammoCount += amount;
+        ammoCount = Mathf.Clamp(ammoCount, 0, maxAmmo);
+        Debug.Log("[Invent√°rio] Muni√ß√£o: " + ammoCount);
     }
 
-    // ==== CHAVES =====================================================
+    public bool UseAmmo(int amount = 1)
+    {
+        if (ammoCount >= amount)
+        {
+            ammoCount -= amount;
+            return true;
+        }
+        return false;
+    }
 
+    public int GetAmmoCount() => ammoCount;
+    public int GetMaxAmmo() => maxAmmo;
+
+    // ==== ITENS DE CURA ==============================================
+    public void AddHealthItem(int amount = 1)
+    {
+        healthItemCount += amount;
+        Debug.Log("[Invent√°rio] Itens de cura: " + healthItemCount);
+    }
+
+   
+    public int GetHealthItemCount() => healthItemCount;
+
+    // ==== CHAVES =====================================================
     public void AddKey(string keyId)
     {
         if (!keys.Contains(keyId))
         {
             keys.Add(keyId);
-            Debug.Log("[Invent·rio] Pegou chave: " + keyId);
+            Debug.Log("[Invent√°rio] Pegou chave: " + keyId);
         }
         else
         {
-            Debug.Log("[Invent·rio] J· tinha a chave: " + keyId);
+            Debug.Log("[Invent√°rio] J√° tinha a chave: " + keyId);
         }
     }
 
-    public bool HasKey(string keyId)
-    {
-        return keys.Contains(keyId);
-    }
+    public bool HasKey(string keyId) => keys.Contains(keyId);
+    public List<string> GetAllKeys() => keys;
 
-    public List<string> GetAllKeys()
-    {
-        return keys;
-    }
-
-    // ==== NOTAS ======================================================
-
+    // ==== NOTAS =====================================================
     public void AddNote(NoteData note)
     {
-        if (note == null)
-        {
-            Debug.LogWarning("[Invent·rio] Tentou adicionar nota nula.");
-            return;
-        }
-
         if (!notes.Contains(note))
         {
             notes.Add(note);
-            Debug.Log("[Invent·rio] Pegou nota: " + note.title);
+            Debug.Log("[Invent√°rio] Pegou nota: " + note.title);
         }
         else
         {
-            Debug.Log("[Invent·rio] J· tinha essa nota: " + note.title);
+            Debug.Log("[Invent√°rio] J√° tinha a nota: " + note.title);
         }
     }
 
-    public List<NoteData> GetAllNotes()
+    public List<NoteData> GetAllNotes() => notes;
+
+    // ==== ESTADO DO INVENT√ÅRIO (para checkpoints/salvar) ============
+    public void LoadInventoryState(int loadedBatteries, List<string> loadedKeys, List<NoteData> loadedNotes, int loadedAmmo)
     {
-        return notes;
+        batteryCount = loadedBatteries;
+        keys = new List<string>(loadedKeys);
+        notes = new List<NoteData>(loadedNotes);
+        ammoCount = loadedAmmo;
     }
-
-    // ==== CARREGAR ESTADO (USADO PELO CHECKPOINT) =====================
-
-    /// <summary>
-    /// Carrega um estado completo de invent·rio.
-    /// Usado pelo CheckpointManager ao dar Respawn.
-    /// </summary>
-    public void LoadInventoryState(int newBatteryCount, List<string> newKeys, List<NoteData> newNotes)
+    public bool UseHealthItem()
+{
+    if (healthItemCount > 0)
     {
-        // Pilhas
-        batteryCount = Mathf.Max(0, newBatteryCount);
-
-        // Chaves
-        keys.Clear();
-        if (newKeys != null)
-            keys.AddRange(newKeys);
-
-        // Notas
-        notes.Clear();
-        if (newNotes != null)
-            notes.AddRange(newNotes);
-
-        Debug.Log("[Invent·rio] Estado restaurado pelo Checkpoint.");
+        healthItemCount--;
+        PlayerStats stats = GetComponent<PlayerStats>();
+        if (stats != null)
+        {
+            int quantidadeDeCura = 25; // Defina aqui o valor de cura desejado
+            stats.AddHealth(quantidadeDeCura);
+            Debug.Log("[Invent√°rio] Usou item de cura! Restam: " + healthItemCount);
+        }
+        else
+        {
+            Debug.LogWarning("[Invent√°rio] PlayerStats n√£o encontrado no GameObject do Player!");
+        }
+        return true;
     }
+    Debug.Log("[Invent√°rio] Nenhum item de cura dispon√≠vel!");
+    return false;
+}
 }

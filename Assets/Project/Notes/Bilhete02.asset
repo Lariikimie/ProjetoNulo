@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9188c642699f0648b9a80a9d1b3bb46, type: 3}
+  m_Name: Bilhete02
+  m_EditorClassIdentifier: 
+  noteId: Bilhete02
+  title: 
+  content: 
+  backgroundSprite: {fileID: 21300000, guid: cf248d5b9e526194d9a246c81564d8f9, type: 3}
+  backgroundColor: {r: 0, g: 0, b: 0, a: 0}
+  backgroundPrefab3D: {fileID: 0}
+  lines: []
+  speechColor: {r: 1, g: 1, b: 1, a: 1}
+  thoughtColor: {r: 1, g: 1, b: 1, a: 0.9}
+  thoughtItalic: 1
+  hasAfterReadingLine: 0
+  afterReadingLine:
+    text: 
+    kind: 0

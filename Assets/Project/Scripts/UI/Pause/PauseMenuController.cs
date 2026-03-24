@@ -79,6 +79,10 @@ public class PauseMenuController : MonoBehaviour
 
     private void Update()
     {
+        // 🔒 Não abre o pause se estiver inspecionando objeto
+        if (ObjectInspector.IsInspecting)
+            return;
+
         // 🔒 Não abre o pause se o inventário estiver aberto
         if (InventoryUI.IsInventoryOpen)
             return;

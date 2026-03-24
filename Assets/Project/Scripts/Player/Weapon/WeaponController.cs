@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class WeaponController : MonoBehaviour
 {
@@ -8,40 +9,55 @@ public class WeaponController : MonoBehaviour
         Taser
     }
 
-    [Header("ReferÍncias")]
-    [SerializeField] private Camera playerCamera;           // C‚mera do jogador (Main Camera)
-    [SerializeField] private WeaponFX weaponFX;             // Script de efeitos da arma (som, muzzle etc.)
-    [SerializeField] private GameObject bulletImpactPrefab; // Prefab do impacto (esfera/partÌcula no ponto do tiro)
+    [Header("Refer√™ncias")]
+    [SerializeField] private Camera playerCamera;
+    [SerializeField] private WeaponFX weaponFX;
+    [SerializeField] private GameObject bulletImpactPrefab;
+    [SerializeField] private PlayerInventory playerInventory; // Refer√™ncia ao invent√°rio
 
     [Header("Pistola (dano)")]
     [SerializeField] private float pistolDamage = 25f;
-    [SerializeField] private float pistolFireRate = 5f;     // tiros por segundo
+    [SerializeField] private float pistolFireRate = 5f;
     [SerializeField] private float pistolMaxDistance = 50f;
-    [SerializeField] private int pistolMaxAmmo = 5;
 
     [Header("Taser (atordoamento)")]
     [SerializeField] private float taserStunDuration = 3f;
-    [SerializeField] private float taserFireRate = 1f;      // mais lento que a pistola
+    [SerializeField] private float taserFireRate = 1f;
     [SerializeField] private float taserMaxDistance = 20f;
 
     [Header("Inputs")]
-    [Tooltip("Se true, tambÈm usa o bot„o configurado no Input Manager (Fire1). Se false, sÛ mouse.")]
+    [Tooltip("Se true, tamb√©m usa o bot√£o configurado no Input Manager (Fire1). Se false, s√≥ mouse.")]
     [SerializeField] private bool usarControle = false;
-    [SerializeField] private string fireButton = "Fire1";   // Nome do bot„o no Input Manager (Fire1)
+    [SerializeField] private string fireButton = "Fire1";
     [SerializeField] private KeyCode switchToPistolKey = KeyCode.Alpha1;
     [SerializeField] private KeyCode switchToTaserKey = KeyCode.Alpha2;
 
+    [Header("HUD")]
+    [SerializeField] private Image taserIconHUD; // arraste o objeto TaserIcon aqui no Inspector
+    [SerializeField] private Image pistolIconHUD; // arraste o objeto PistolIcon aqui no Inspector
+
+    [Header("√Åudio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip weaponSwitchClip;
+
     private float nextTimeToFire = 0f;
-    private WeaponMode currentMode = WeaponMode.Pistol;
-    private int currentPistolAmmo;
+    private WeaponMode currentMode = WeaponMode.Taser; // Come√ßa com o Taser
+    private bool hasPistol = false; // S√≥ mostra o √≠cone se pegar a arma
+
+    // LayerMask para ignorar HintTrigger
+    private int ignoreHintTriggerMask;
 
     private void Start()
     {
         if (playerCamera == null)
             playerCamera = Camera.main;
 
-        currentPistolAmmo = pistolMaxAmmo;
-        Debug.Log("[WEAPON] Modo inicial: PISTOLA. MuniÁ„o: " + currentPistolAmmo);
+        if (playerInventory == null)
+            playerInventory = GetComponentInParent<PlayerInventory>();
+
+        ignoreHintTriggerMask = ~(1 << LayerMask.NameToLayer("HintTrigger"));
+
+        UpdateWeaponHUD();
     }
 
     private void Update()
@@ -52,169 +68,128 @@ public class WeaponController : MonoBehaviour
 
     private void HandleWeaponSwitch()
     {
-        if (Input.GetKeyDown(switchToPistolKey))
+        bool switched = false;
+
+        if (hasPistol && Input.GetKeyDown(switchToPistolKey))
         {
-            currentMode = WeaponMode.Pistol;
-            Debug.Log("[WEAPON] Troca para PISTOLA. MuniÁ„o atual: " + currentPistolAmmo);
+            if (currentMode != WeaponMode.Pistol)
+            {
+                currentMode = WeaponMode.Pistol;
+                switched = true;
+            }
+        }
+        else if (Input.GetKeyDown(switchToTaserKey))
+        {
+            if (currentMode != WeaponMode.Taser)
+            {
+                currentMode = WeaponMode.Taser;
+                switched = true;
+            }
         }
 
-        if (Input.GetKeyDown(switchToTaserKey))
+        if (switched)
         {
-            currentMode = WeaponMode.Taser;
-            Debug.Log("[WEAPON] Troca para TASER.");
+            PlayWeaponSwitchSound();
+            UpdateWeaponHUD();
+            Debug.Log("[WeaponController] Troca de arma: " + currentMode);
         }
+    }
+
+    private void UpdateWeaponHUD()
+    {
+        if (taserIconHUD != null)
+            taserIconHUD.enabled = (currentMode == WeaponMode.Taser);
+
+        if (pistolIconHUD != null)
+            pistolIconHUD.enabled = (hasPistol && currentMode == WeaponMode.Pistol);
+    }
+
+    // Chame este m√©todo quando o player pegar a arma na cena
+    public void OnPickupPistol()
+    {
+        hasPistol = true;
+        UpdateWeaponHUD();
+        Debug.Log("[WeaponController] Pistola coletada!");
+    }
+
+    private void PlayWeaponSwitchSound()
+    {
+        if (audioSource != null && weaponSwitchClip != null)
+            audioSource.PlayOneShot(weaponSwitchClip);
     }
 
     private void HandleShooting()
     {
-        bool wantsToShoot = false;
-
-        // Mouse: bot„o esquerdo
-        if (Input.GetMouseButton(0))
-            wantsToShoot = true;
-
-        // Controle: sÛ se estiver habilitado e Fire1 configurado no Input Manager
-        if (usarControle && Input.GetButton(fireButton))
-            wantsToShoot = true;
-
-        if (!wantsToShoot)
-            return;
-
-        float fireRate = (currentMode == WeaponMode.Pistol) ? pistolFireRate : taserFireRate;
-        if (fireRate <= 0f)
-            fireRate = 1f;
-
-        if (Time.time < nextTimeToFire)
-            return;
-
-        nextTimeToFire = Time.time + 1f / fireRate;
-
-        if (currentMode == WeaponMode.Pistol)
-            ShootPistol();
-        else
-            ShootTaser();
+        if (usarControle ? Input.GetButton(fireButton) : Input.GetMouseButton(0))
+        {
+            if (Time.time >= nextTimeToFire)
+            {
+                if (currentMode == WeaponMode.Pistol && hasPistol)
+                {
+                    ShootPistol();
+                    nextTimeToFire = Time.time + 1f / pistolFireRate;
+                }
+                else if (currentMode == WeaponMode.Taser)
+                {
+                    ShootTaser();
+                    nextTimeToFire = Time.time + 1f / taserFireRate;
+                }
+            }
+        }
     }
 
-    // ==================== PISTOLA ====================
     private void ShootPistol()
     {
-        if (currentPistolAmmo <= 0)
+        Debug.Log("[WeaponController] ShootPistol() chamado!");
+        if (playerInventory != null && playerInventory.GetAmmoCount() > 0)
         {
-            Debug.Log("[WEAPON] Sem muniÁ„o na pistola! Use o TASER (2).");
-            return;
-        }
+            playerInventory.UseAmmo(1);
+            Debug.Log("[WeaponController] Pistola disparada! Muni√ß√£o restante: " + playerInventory.GetAmmoCount());
+            if (weaponFX != null)
+                weaponFX.PlayShotEffects();
 
-        currentPistolAmmo--;
-        Debug.Log("[WEAPON] Tiro de pistola. MuniÁ„o restante: " + currentPistolAmmo);
-
-        if (playerCamera == null)
-        {
-            Debug.LogWarning("WeaponController: playerCamera n„o foi atribuÌda no Inspector!");
-            return;
-        }
-
-        if (weaponFX != null)
-            weaponFX.PlayShotEffects();
-
-        // RETÕCULA COMO ORIGEM: centro da tela
-        Ray ray = playerCamera.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f, 0f));
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, pistolMaxDistance))
-        {
-            Debug.DrawLine(ray.origin, hit.point, Color.red, 0.2f);
-
-            if (bulletImpactPrefab != null)
+            // Raycast para acertar inimigos/objetos
+            Ray ray = playerCamera.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2, 0));
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit, pistolMaxDistance))
             {
-                Instantiate(
-                    bulletImpactPrefab,
-                    hit.point,
-                    Quaternion.LookRotation(hit.normal)
-                );
-            }
+                Debug.Log("[WeaponController] Pistola acertou: " + hit.collider.name);
 
-            // 1) TargetDummy (alvo de teste) ñ ainda funciona
-            TargetDummy dummy = hit.collider.GetComponent<TargetDummy>();
-            if (dummy != null)
-            {
-                dummy.TakeDamage(pistolDamage);
-                Debug.Log("[WEAPON] PISTOLA acertou TargetDummy: " + dummy.gameObject.name);
-                return;
-            }
+                // Instancia o efeito de impacto
+                if (bulletImpactPrefab != null)
+                    Instantiate(bulletImpactPrefab, hit.point, Quaternion.LookRotation(hit.normal));
 
-            // 2) Inimigo "real" com EnemyStats
-            EnemyStats enemy = hit.collider.GetComponentInParent<EnemyStats>();
-            if (enemy != null)
-            {
-                enemy.TakeDamage(pistolDamage);
-                Debug.Log("[WEAPON] PISTOLA acertou inimigo: " + enemy.gameObject.name +
-                          " | HP apÛs dano: " + enemy.CurrentHealth);
-                return;
+                // Aplica dano se for inimigo
+                var enemy = hit.collider.GetComponent<EnemyStats>();
+                if (enemy != null)
+                {
+                    enemy.TakeDamage(pistolDamage);
+                }
             }
-
-            // 3) N„o È inimigo nem dummy, mas acertou algo
-            Debug.Log("[WEAPON] Pistola acertou objeto: " + hit.collider.name);
         }
         else
         {
-            Debug.DrawRay(ray.origin, ray.direction * pistolMaxDistance, Color.yellow, 0.2f);
-            Debug.Log("[WEAPON] Pistola n„o acertou nada.");
+            Debug.Log("[WeaponController] Sem muni√ß√£o!");
         }
     }
 
-    // ==================== TASER ====================
     private void ShootTaser()
     {
-        if (playerCamera == null)
-        {
-            Debug.LogWarning("WeaponController: playerCamera n„o foi atribuÌda no Inspector!");
-            return;
-        }
+        Debug.Log("[WeaponController] ShootTaser() chamado!");
 
-        if (weaponFX != null)
-            weaponFX.PlayShotEffects();
-
-        // RETÕCULA COMO ORIGEM: centro da tela
-        Ray ray = playerCamera.ScreenPointToRay(new Vector3(Screen.width / 2f, Screen.height / 2f, 0f));
+        Ray ray = playerCamera.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2, 0));
         RaycastHit hit;
-
         if (Physics.Raycast(ray, out hit, taserMaxDistance))
         {
-            Debug.DrawLine(ray.origin, hit.point, Color.cyan, 0.2f);
+            Debug.Log("[WeaponController] Taser acertou: " + hit.collider.name);
 
-            if (bulletImpactPrefab != null)
-            {
-                Instantiate(
-                    bulletImpactPrefab,
-                    hit.point,
-                    Quaternion.LookRotation(hit.normal)
-                );
-            }
-
-            // TargetDummy: sÛ log, n„o atordoa alvo de teste
-            TargetDummy dummy = hit.collider.GetComponent<TargetDummy>();
-            if (dummy != null)
-            {
-                Debug.Log("[WEAPON] TASER acertou TargetDummy (sem dano): " + dummy.gameObject.name);
-                return;
-            }
-
-            // Inimigo real com EnemyStats: ATORDOA
-            EnemyStats enemy = hit.collider.GetComponentInParent<EnemyStats>();
+            // Aplica stun se for inimigo
+            var enemy = hit.collider.GetComponent<EnemyStats>();
             if (enemy != null)
             {
                 enemy.ApplyStun(taserStunDuration);
-                Debug.Log("[WEAPON] TASER acertou inimigo: " + enemy.gameObject.name +
-                          " | Atordoado por " + taserStunDuration + "s.");
-                return;
             }
-
-            Debug.Log("[WEAPON] TASER acertou objeto: " + hit.collider.name);
         }
-        else
-        {
-            Debug.DrawRay(ray.origin, ray.direction * taserMaxDistance, Color.cyan, 0.2f);
-            Debug.Log("[WEAPON] TASER n„o acertou nada.");
-        }
+        // Adicione aqui efeito visual/sonoro do taser se desejar
     }
 }
