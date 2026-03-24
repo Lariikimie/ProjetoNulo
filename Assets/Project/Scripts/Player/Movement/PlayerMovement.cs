@@ -75,6 +75,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        // Bloqueia movimentação se o jogo estiver pausado
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused)
+            return;
+
         HandleMovement();
         HandleGravity();
         HandleStamina();

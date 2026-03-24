@@ -63,12 +63,17 @@ public class InventoryUI : MonoBehaviour
         Debug.Log("[InventoryUI] Start() concluído. Painel inicial desativado.");
     }
 
+
     private void Update()
     {
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused && !IsOpen)
+        return;
         HandleOpenCloseInput();
 
         if (!IsOpen)
             return;
+        if (noteViewerUI != null && noteViewerUI.IsOpen())
+        return;
 
         HandleNavigationInput();
         HandleUseItemInput();

@@ -6,36 +6,38 @@ using TMPro;
 public class NoteViewerUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private GameObject notePanel;   // NotePanel
-    [SerializeField] private TMP_Text titleText;     // TitleText
-    [SerializeField] private TMP_Text contentText;   // ContentText
-
-    [Header("Botões (opcional, pode deixar null se não usar)")]
-    [SerializeField] private Button nextButton;
-    [SerializeField] private Button previousButton;
+    [SerializeField] private GameObject notePanel;
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text contentText;
     [SerializeField] private Button closeButton;
+
+    [Header("Lista de Notas")]
+    [SerializeField] private Transform notesListContainer;
+    [SerializeField] private GameObject noteButtonPrefab;
 
     [Header("Dados")]
     [SerializeField] private PlayerInventory playerInventory;
 
     [Header("Visual 2D da Nota")]
-    [Tooltip("RawImage de fundo dentro do NotePanel (o 'papel' da nota).")]
     [SerializeField] private RawImage backgroundRawImage;
-    [Tooltip("Cor padrão do fundo.")]
     [SerializeField] private Color defaultBackgroundColor = Color.white;
 
     [Header("Visual 3D (NoteWorld)")]
-    [Tooltip("Referência ao NoteWorldView genérico (squad 3D).")]
     [SerializeField] private NoteWorldView noteWorldView;
-    [Tooltip("Transform para posicionar a câmera do mundo 3D.")]
     [SerializeField] private Transform cameraPoint;
-    [Tooltip("Câmera que mostra o squad 3D.")]
     [SerializeField] private Camera noteCamera;
 
+    [Header("Cores de Destaque")]
+    [SerializeField] private Color selectedButtonColor = new Color(1f, 0.92f, 0.016f, 1f); // Amarelo
+    [SerializeField] private Color normalButtonColor = Color.white;
+    [SerializeField] private Color selectedTextColor = Color.black;
+    [SerializeField] private Color normalTextColor = Color.black;
+
     private List<NoteData> notes;
-    private int currentIndex = -1;
+    private int selectedNoteIndex = 0;
     private bool isOpen = false;
     private float previousTimeScale = 1f;
+    private List<Button> noteButtons = new List<Button>();
 
     private void Start()
     {
@@ -44,19 +46,11 @@ public class NoteViewerUI : MonoBehaviour
         else
             Debug.LogError("[NoteViewerUI] notePanel NÃO atribuído no Inspector.");
 
-        if (nextButton != null)
-            nextButton.onClick.AddListener(NextNote);
-
-        if (previousButton != null)
-            previousButton.onClick.AddListener(PreviousNote);
-
         if (closeButton != null)
             closeButton.onClick.AddListener(CloseNote);
 
         if (playerInventory == null)
             Debug.LogWarning("[NoteViewerUI] PlayerInventory NÃO atribuído no Inspector (arraste o Player aqui).");
-        else
-            Debug.Log("[NoteViewerUI] Start() OK. PlayerInventory atribuído: " + playerInventory.name);
 
         if (backgroundRawImage == null)
             Debug.LogWarning("[NoteViewerUI] backgroundRawImage NÃO atribuído (arraste o RawImage de fundo do NotePanel).");
@@ -68,10 +62,11 @@ public class NoteViewerUI : MonoBehaviour
             Debug.LogWarning("[NoteViewerUI] noteCamera NÃO atribuída (arraste a câmera do mundo 3D).");
     }
 
-    /// <summary>
-    /// Chamado pelo InventoryUI/HotbarSlotUI.
-    /// Se 'note' for null, tenta abrir a PRIMEIRA nota válida do inventário.
-    /// </summary>
+    public bool IsOpen()
+    {
+        return isOpen;
+    }
+
     public void ShowNote(NoteData note)
     {
         if (playerInventory == null)
@@ -80,22 +75,14 @@ public class NoteViewerUI : MonoBehaviour
             return;
         }
 
-        // Pega todas as notas atuais do inventário
         List<NoteData> allNotes = playerInventory.GetAllNotes();
 
-        if (allNotes == null)
-        {
-            Debug.LogWarning("[NoteViewerUI] Lista de notas retornada pelo PlayerInventory é nula.");
-            return;
-        }
-
-        if (allNotes.Count == 0)
+        if (allNotes == null || allNotes.Count == 0)
         {
             Debug.LogWarning("[NoteViewerUI] PlayerInventory não possui nenhuma nota para exibir.");
             return;
         }
 
-        // Filtra apenas notas não nulas
         notes = new List<NoteData>();
         foreach (var n in allNotes)
             if (n != null)
@@ -107,26 +94,21 @@ public class NoteViewerUI : MonoBehaviour
             return;
         }
 
-        // Decide qual nota mostrar
         if (note != null)
         {
-            currentIndex = notes.IndexOf(note);
-            if (currentIndex < 0)
-            {
-                Debug.Log("[NoteViewerUI] Nota recebida não está na lista filtrada. Caindo para a primeira nota válida.");
-                currentIndex = 0;
-            }
-
-            Debug.Log($"[NoteViewerUI] ShowNote chamado com nota '{note.title}'. Index final: {currentIndex}. Total notas válidas: {notes.Count}");
+            selectedNoteIndex = notes.IndexOf(note);
+            if (selectedNoteIndex < 0)
+                selectedNoteIndex = 0;
         }
         else
         {
-            currentIndex = 0;
-            Debug.Log($"[NoteViewerUI] ShowNote chamado com note=null. Abrindo primeira nota válida: '{notes[0].title}'. Total notas válidas: {notes.Count}");
+            selectedNoteIndex = 0;
         }
 
-        UpdateUI();
         OpenPanel();
+        PopulateNotesList();
+        ShowSelectedNote();
+        UpdateNoteButtonHighlight();
     }
 
     private void OpenPanel()
@@ -134,7 +116,6 @@ public class NoteViewerUI : MonoBehaviour
         if (notePanel != null)
             notePanel.SetActive(true);
 
-        // Ativa a câmera do mundo 3D e posiciona
         if (noteCamera != null && cameraPoint != null)
         {
             noteCamera.enabled = true;
@@ -145,8 +126,6 @@ public class NoteViewerUI : MonoBehaviour
         previousTimeScale = Time.timeScale;
         Time.timeScale = 0f;
         isOpen = true;
-
-        Debug.Log($"[NoteViewerUI] Painel de nota ABERTO. previousTimeScale={previousTimeScale}, TimeScale agora={Time.timeScale}");
     }
 
     public void CloseNote()
@@ -159,8 +138,104 @@ public class NoteViewerUI : MonoBehaviour
 
         Time.timeScale = previousTimeScale;
         isOpen = false;
+    }
 
-        Debug.Log($"[NoteViewerUI] Nota fechada. TimeScale restaurado para {previousTimeScale}");
+    private void PopulateNotesList()
+    {
+        foreach (Transform child in notesListContainer)
+            Destroy(child.gameObject);
+        noteButtons.Clear();
+
+        for (int i = 0; i < notes.Count; i++)
+        {
+            NoteData note = notes[i];
+            GameObject buttonObj = Instantiate(noteButtonPrefab, notesListContainer);
+            buttonObj.SetActive(true);
+
+            TMP_Text tmp = buttonObj.GetComponentInChildren<TMP_Text>();
+            if (tmp != null)
+            {
+                tmp.text = note.title;
+                tmp.enableAutoSizing = true;
+                tmp.alignment = TextAlignmentOptions.Midline;
+                tmp.color = normalTextColor;
+                tmp.fontSizeMin = 18;
+                tmp.fontSizeMax = 36;
+            }
+            else
+            {
+                Text txt = buttonObj.GetComponentInChildren<Text>();
+                if (txt != null) txt.text = note.title;
+                else Debug.LogWarning("[NoteViewerUI] NoteButtonPrefab NÃO tem TMP_Text nem Text!");
+            }
+
+            // LayoutElement para responsividade
+            LayoutElement layout = buttonObj.GetComponent<LayoutElement>();
+            if (layout == null)
+                layout = buttonObj.AddComponent<LayoutElement>();
+            layout.minHeight = 40;
+            layout.preferredHeight = 50;
+            layout.flexibleWidth = 1;
+
+            Button btn = buttonObj.GetComponent<Button>();
+            if (btn == null)
+            {
+                Debug.LogWarning("[NoteViewerUI] NoteButtonPrefab NÃO tem componente Button!");
+                continue;
+            }
+
+            int capturedIndex = i;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() =>
+            {
+                selectedNoteIndex = capturedIndex;
+                ShowSelectedNote();
+                UpdateNoteButtonHighlight();
+                Debug.Log($"[NoteViewerUI] Nota selecionada: '{note.title}' (índice {capturedIndex})");
+            });
+
+            noteButtons.Add(btn);
+        }
+    }
+
+    private void UpdateNoteButtonHighlight()
+    {
+        for (int i = 0; i < noteButtons.Count; i++)
+        {
+            Button btn = noteButtons[i];
+            if (btn != null)
+            {
+                Image bg = btn.GetComponent<Image>();
+                TMP_Text tmp = btn.GetComponentInChildren<TMP_Text>();
+                bool selected = (i == selectedNoteIndex);
+
+                if (bg != null)
+                    bg.color = selected ? selectedButtonColor : normalButtonColor;
+
+                if (tmp != null)
+                    tmp.color = selected ? selectedTextColor : normalTextColor;
+
+                // Opcional: aumentar levemente o tamanho do botão selecionado
+                btn.transform.localScale = selected ? new Vector3(1.05f, 1.05f, 1f) : Vector3.one;
+            }
+        }
+    }
+
+    private void ShowSelectedNote()
+    {
+        if (notes == null || notes.Count == 0 || selectedNoteIndex < 0 || selectedNoteIndex >= notes.Count)
+            return;
+
+        NoteData note = notes[selectedNoteIndex];
+        if (titleText != null)
+            titleText.text = note.title;
+        if (contentText != null)
+            contentText.text = note.content;
+
+        Apply2DBackground(note);
+
+        if (noteWorldView != null)
+            noteWorldView.SetNoteVisual(note);
     }
 
     private void Update()
@@ -168,59 +243,28 @@ public class NoteViewerUI : MonoBehaviour
         if (!isOpen)
             return;
 
-        bool closeKey = Input.GetKeyDown(KeyCode.Escape);
-        bool closeButton = Input.GetButtonDown("Cancel");
-
-        if (closeKey || closeButton)
+        if (UINavigationInput.Instance != null && noteButtons.Count > 0)
         {
-            Debug.Log("[NoteViewerUI] Input de fechar nota detectado (ESC ou Cancel).");
+            if (UINavigationInput.Instance.UpPressedThisFrame())
+            {
+                selectedNoteIndex = (selectedNoteIndex - 1 + noteButtons.Count) % noteButtons.Count;
+                ShowSelectedNote();
+                UpdateNoteButtonHighlight();
+            }
+            if (UINavigationInput.Instance.DownPressedThisFrame())
+            {
+                selectedNoteIndex = (selectedNoteIndex + 1) % noteButtons.Count;
+                ShowSelectedNote();
+                UpdateNoteButtonHighlight();
+            }
+            if (UINavigationInput.Instance.ConfirmPressedThisFrame())
+            {
+                noteButtons[selectedNoteIndex].onClick.Invoke();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetButtonDown("Cancel"))
             CloseNote();
-        }
-    }
-
-    private void UpdateUI()
-    {
-        if (notes == null || notes.Count == 0 || currentIndex < 0 || currentIndex >= notes.Count)
-        {
-            Debug.LogWarning("[NoteViewerUI] Não há nota válida para exibir. notes=null? " +
-                             (notes == null) + ", count=" + (notes != null ? notes.Count : 0) +
-                             ", currentIndex=" + currentIndex);
-            return;
-        }
-
-        NoteData note = notes[currentIndex];
-        if (note == null)
-        {
-            Debug.LogWarning("[NoteViewerUI] Nota em notes[" + currentIndex + "] é nula.");
-            return;
-        }
-
-        // Texto
-        if (titleText != null)
-            titleText.text = note.title;
-        if (contentText != null)
-            contentText.text = note.content;
-
-        // Visual 2D
-        Apply2DBackground(note);
-
-        // Visual 3D: troca textura do squad genérico
-        if (noteWorldView != null)
-        {
-            noteWorldView.SetNoteVisual(note);
-            Debug.Log("[NoteViewerUI] Atualizando squad 3D para nota: " + note.title);
-        }
-
-        bool canPrev = currentIndex > 0;
-        bool canNext = currentIndex < notes.Count - 1;
-
-        if (previousButton != null)
-            previousButton.interactable = canPrev;
-
-        if (nextButton != null)
-            nextButton.interactable = canNext;
-
-        Debug.Log($"[NoteViewerUI] UpdateUI exibindo índice {currentIndex} de {notes.Count}. canPrev={canPrev}, canNext={canNext}");
     }
 
     private void Apply2DBackground(NoteData note)
@@ -231,7 +275,7 @@ public class NoteViewerUI : MonoBehaviour
         if (note.backgroundSprite != null)
             backgroundRawImage.texture = note.backgroundSprite.texture;
         else
-            backgroundRawImage.texture = null; // Ou uma textura padrão, se desejar
+            backgroundRawImage.texture = null;
 
         if (note.backgroundColor.a > 0f ||
             note.backgroundColor.r > 0f ||
@@ -243,30 +287,6 @@ public class NoteViewerUI : MonoBehaviour
         else
         {
             backgroundRawImage.color = defaultBackgroundColor;
-        }
-    }
-
-    public void NextNote()
-    {
-        if (notes == null) return;
-
-        if (currentIndex < notes.Count - 1)
-        {
-            currentIndex++;
-            Debug.Log("[NoteViewerUI] NextNote -> novo index = " + currentIndex);
-            UpdateUI();
-        }
-    }
-
-    public void PreviousNote()
-    {
-        if (notes == null) return;
-
-        if (currentIndex > 0)
-        {
-            currentIndex--;
-            Debug.Log("[NoteViewerUI] PreviousNote -> novo index = " + currentIndex);
-            UpdateUI();
         }
     }
 }

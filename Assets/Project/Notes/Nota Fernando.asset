@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Nota Fernando
   m_EditorClassIdentifier: 
   noteId: Nota Fernando
-  title: 
+  title: Nota Fernando
   content: 
   backgroundSprite: {fileID: 21300000, guid: 03de57f39e0ddaa44990575c32456364, type: 3}
   backgroundColor: {r: 0, g: 0, b: 0, a: 0}

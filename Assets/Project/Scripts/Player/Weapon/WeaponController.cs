@@ -62,8 +62,11 @@ public class WeaponController : MonoBehaviour
 
     private void Update()
     {
+         if (UIPanelManager.Instance != null && UIPanelManager.Instance.IsAnyExclusivePanelOpen())
+        return;
         HandleWeaponSwitch();
         HandleShooting();
+       
     }
 
     private void HandleWeaponSwitch()

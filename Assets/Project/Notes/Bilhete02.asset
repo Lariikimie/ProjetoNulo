@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Bilhete02
   m_EditorClassIdentifier: 
   noteId: Bilhete02
-  title: 
+  title: Bilhete02
   content: 
   backgroundSprite: {fileID: 21300000, guid: cf248d5b9e526194d9a246c81564d8f9, type: 3}
   backgroundColor: {r: 0, g: 0, b: 0, a: 0}

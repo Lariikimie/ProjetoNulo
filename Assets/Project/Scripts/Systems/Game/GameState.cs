@@ -9,18 +9,23 @@ public class GameStateManager : MonoBehaviour
     [SerializeField] private GameState current = GameState.Gameplay;
     public GameState Current => current;
 
+    // Propriedades estáticas para checagem fácil em qualquer script
     public static bool IsGameplay => Instance != null && Instance.current == GameState.Gameplay;
     public static bool IsDialogue => Instance != null && Instance.current == GameState.Dialogue;
     public static bool IsPaused => Instance != null && Instance.current == GameState.Paused;
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
-    /// <summary> Entra no estado de Di�logo (tempo normal). </summary>
+    /// <summary> Entra no estado de Diálogo (tempo normal). </summary>
     public void EnterDialogue()
     {
         if (current == GameState.Paused) return;
@@ -28,7 +33,7 @@ public class GameStateManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
-    /// <summary> Sai do Di�logo e volta para Gameplay (se n�o estiver em Pause). </summary>
+    /// <summary> Sai do Diálogo e volta para Gameplay (se não estiver em Pause). </summary>
     public void ExitDialogue()
     {
         if (current == GameState.Paused) return;

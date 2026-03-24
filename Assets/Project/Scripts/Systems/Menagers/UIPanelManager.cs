@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Tipos de painÈis de UI que N√O podem ficar abertos ao mesmo tempo.
+/// Tipos de pain√©is de UI que N√ÉO podem ficar abertos ao mesmo tempo.
 /// Adicione aqui conforme for criando novos sistemas de painel.
 /// </summary>
 public enum UIPanelType
@@ -13,16 +13,16 @@ public enum UIPanelType
     NoteViewer = 4,
     Dialogue = 5,
     MainMenu = 6
-    // VocÍ pode adicionar mais tipos depois, se precisar
+    // Voc√™ pode adicionar mais tipos depois, se precisar
 }
 
 /// <summary>
 /// Gerenciador central para garantir que apenas UM painel bloqueante
 /// (Inventory, Pause, Map, MainMenu, etc.) fique aberto por vez.
 /// 
-/// Uso tÌpico em um painel:
+/// Uso t√≠pico em um painel:
 /// if (!UIPanelManager.Instance.TryOpen(UIPanelType.Inventory)) return;
-/// // abrir invent·rio
+/// // abrir invent√°rio
 /// 
 /// Ao fechar:
 /// UIPanelManager.Instance.Close(UIPanelType.Inventory);
@@ -41,7 +41,7 @@ public class UIPanelManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Debug.LogWarning("[UIPanelManager] J· existe uma inst‚ncia, destruindo duplicata.");
+            Debug.LogWarning("[UIPanelManager] J√° existe uma inst√¢ncia, destruindo duplicata.");
             Destroy(gameObject);
             return;
         }
@@ -52,7 +52,7 @@ public class UIPanelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Verifica se È permitido abrir o painel deste tipo, considerando o painel j· aberto.
+    /// Verifica se √© permitido abrir o painel deste tipo, considerando o painel j√° aberto.
     /// </summary>
     public bool CanOpen(UIPanelType type)
     {
@@ -63,19 +63,19 @@ public class UIPanelManager : MonoBehaviour
         if (currentPanel == UIPanelType.None)
             return true;
 
-        // J· est· aberto o MESMO tipo -> ok (idempotente)
+        // J√° est√° aberto o MESMO tipo -> ok (idempotente)
         if (currentPanel == type)
             return true;
 
-        // Outro painel j· est· aberto -> bloqueia
-        Debug.Log($"[UIPanelManager] Bloqueado abrir {type}, j· est· aberto {currentPanel}.");
+        // Outro painel j√° est√° aberto -> bloqueia
+        Debug.Log($"[UIPanelManager] Bloqueado abrir {type}, j√° est√° aberto {currentPanel}.");
         return false;
     }
 
     /// <summary>
     /// Tenta abrir o painel deste tipo.
-    /// Retorna true se conseguiu (ou se esse painel j· est· aberto),
-    /// false se h· outro painel bloqueando.
+    /// Retorna true se conseguiu (ou se esse painel j√° est√° aberto),
+    /// false se h√° outro painel bloqueando.
     /// </summary>
     public bool TryOpen(UIPanelType type)
     {
@@ -95,7 +95,7 @@ public class UIPanelManager : MonoBehaviour
     {
         if (currentPanel != type)
         {
-            // N„o È o painel registrado como atual, ignora silenciosamente
+            // N√£o √© o painel registrado como atual, ignora silenciosamente
             return;
         }
 
@@ -110,5 +110,13 @@ public class UIPanelManager : MonoBehaviour
     {
         Debug.Log($"[UIPanelManager] ForceCloseAll. Painel anterior: {currentPanel}");
         currentPanel = UIPanelType.None;
+    }
+
+    /// <summary>
+    /// Retorna true se algum painel exclusivo est√° aberto.
+    /// </summary>
+    public bool IsAnyExclusivePanelOpen()
+    {
+        return currentPanel != UIPanelType.None;
     }
 }
