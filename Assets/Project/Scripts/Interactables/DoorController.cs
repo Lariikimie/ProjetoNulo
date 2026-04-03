@@ -1,41 +1,42 @@
 using UnityEngine;
 
-/// <summary>
-/// Controla uma porta simples que pode estar trancada por uma chave.
-/// - Usa um collider com IsTrigger para detectar o player.
-/// - Aperta E (teclado) ou botão "Submit" (controle) para interagir.
-/// - Se precisar de chave, verifica no PlayerInventory.
-/// - Abre/fecha rotacionando o Transform da porta em Y.
-/// </summary>
 [RequireComponent(typeof(Collider))]
 public class DoorController : MonoBehaviour
 {
-    [Header("Referências")]
-    [Tooltip("Transform da porta que será rotacionado (pode ser o próprio objeto ou um filho com o modelo).")]
+    public enum DoorAccessMode
+    {
+        Unopenable = 0,
+        Free = 1,
+        RequiresKey = 2
+    }
+
+    [Header("References")]
+    [Tooltip("Transform to rotate. If empty, uses this transform.")]
     [SerializeField] private Transform doorTransform;
 
-    [Header("Configuração")]
-    [Tooltip("A porta começa aberta?")]
-    [SerializeField] private bool startOpen = false;
-
-    [Tooltip("A porta precisa de chave para abrir pela primeira vez?")]
-    [SerializeField] private bool requiresKey = true;
-
-    [Tooltip("ID da chave necessária (deve combinar com o keyId do ItemPickup de chave).")]
+    [Header("Door Access")]
+    [SerializeField] private DoorAccessMode accessMode = DoorAccessMode.Free;
     [SerializeField] private string requiredKeyId = "ChaveDiretoria";
+    [SerializeField] private bool consumeKeyOnUnlock = false;
 
-    [Tooltip("Ângulo de abertura da porta em Y (em graus). Ex: 90 ou -90.")]
+    [Header("Door State")]
+    [SerializeField] private bool startOpen = false;
+    [SerializeField] private bool allowClose = true;
+
+    [Header("Animation")]
+    [Tooltip("Target local Y delta in degrees when opened.")]
     [SerializeField] private float openAngle = 90f;
+    [SerializeField] private float openCloseSpeed = 180f;
 
-    [Header("Interação")]
-    [SerializeField] private bool usarControle = false;
-
-    [Tooltip("Nome do botão de interação no Input Manager (para controle).")]
-    [SerializeField] private string interactButton = "Submit"; // botão A / Enter, se configurado
+    [Header("Controller Support")]
+    [SerializeField] private bool fallbackToSubmitButton = true;
+    [SerializeField] private string interactButton = "Submit";
 
     private bool isOpen;
-    private bool isLocked; // travada por chave ou não
+    private bool isUnlocked;
+    private bool isAnimating;
     private bool playerInRange;
+
     private PlayerInventory playerInventory;
 
     private Quaternion closedRotation;
@@ -43,11 +44,9 @@ public class DoorController : MonoBehaviour
 
     private void Reset()
     {
-        // Garante que o collider é Trigger para detectar o player
         Collider col = GetComponent<Collider>();
         col.isTrigger = true;
 
-        // Se não foi setado no Inspector, assume que a porta é o próprio objeto
         if (doorTransform == null)
             doorTransform = transform;
     }
@@ -68,113 +67,134 @@ public class DoorController : MonoBehaviour
     private void Start()
     {
         isOpen = startOpen;
-
-        // Se a porta precisa de chave, começa travada. Senão, destravada.
-        isLocked = requiresKey;
-
-        // Aplica rotação inicial
-        if (isOpen)
-            doorTransform.localRotation = openedRotation;
-        else
-            doorTransform.localRotation = closedRotation;
+        isUnlocked = accessMode != DoorAccessMode.RequiresKey;
+        doorTransform.localRotation = isOpen ? openedRotation : closedRotation;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player"))
-        {
-            playerInRange = true;
-            playerInventory = other.GetComponent<PlayerInventory>();
+        if (!other.CompareTag("Player"))
+            return;
 
-            if (playerInventory == null)
-            {
-                Debug.LogWarning("[DoorController] Player não tem PlayerInventory.");
-            }
-            else
-            {
-                Debug.Log("[DoorController] Player aproximou da porta.");
-            }
-        }
+        playerInRange = true;
+        playerInventory = other.GetComponent<PlayerInventory>();
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.CompareTag("Player"))
-        {
-            playerInRange = false;
-            playerInventory = null;
-        }
+        if (!other.CompareTag("Player"))
+            return;
+
+        playerInRange = false;
+        playerInventory = null;
     }
 
     private void Update()
     {
-        if (!playerInRange || playerInventory == null)
+        if (isAnimating)
+        {
+            UpdateDoorRotation();
+        }
+
+        if (!playerInRange || isAnimating)
             return;
 
-        // Teclado
-        bool interactKey = Input.GetKeyDown(KeyCode.E);
+        if (!GetInteractionPressedThisFrame())
+            return;
 
-        // Controle (se habilitado)
-        bool interactBtn = usarControle && Input.GetButtonDown(interactButton);
+        Interact();
+    }
 
-        if (interactKey || interactBtn)
-        {
-            Interact();
-        }
+    private bool GetInteractionPressedThisFrame()
+    {
+        if (UINavigationInput.Instance != null)
+            return UINavigationInput.Instance.InteractPressedThisFrame();
+
+        bool keyboard = Input.GetKeyDown(KeyCode.E);
+        bool button = fallbackToSubmitButton && !string.IsNullOrEmpty(interactButton) && Input.GetButtonDown(interactButton);
+        return keyboard || button;
     }
 
     private void Interact()
     {
-        // Se a porta está fechada, tentamos abrir
-        if (!isOpen)
+        if (accessMode == DoorAccessMode.Unopenable)
         {
-            TryOpen();
+            Debug.Log("[DoorController] This door cannot be opened.");
+            return;
         }
-        else
+
+        if (isOpen)
         {
-            // Se já está aberta, só fechamos (não precisa de chave para fechar)
+            if (!allowClose)
+                return;
+
             CloseDoor();
+            return;
         }
-    }
 
-    private void TryOpen()
-    {
-        if (isLocked)
-        {
-            if (!requiresKey)
-            {
-                // Nunca deveria acontecer, mas só por segurança
-                isLocked = false;
-            }
-            else
-            {
-                // Verifica se o player tem a chave
-                if (!playerInventory.HasKey(requiredKeyId))
-                {
-                    Debug.Log("[DoorController] Porta trancada. Precisa da chave: " + requiredKeyId);
-                    return;
-                }
-
-                // Tem a chave, destranca
-                isLocked = false;
-                Debug.Log("[DoorController] Porta destrancada com chave: " + requiredKeyId);
-            }
-        }
+        if (!TryUnlockIfNeeded())
+            return;
 
         OpenDoor();
+    }
+
+    private bool TryUnlockIfNeeded()
+    {
+        if (accessMode != DoorAccessMode.RequiresKey)
+            return true;
+
+        if (isUnlocked)
+            return true;
+
+        if (playerInventory == null)
+        {
+            Debug.LogWarning("[DoorController] PlayerInventory not found on player.");
+            return false;
+        }
+
+        if (!playerInventory.HasKey(requiredKeyId))
+        {
+            Debug.Log("[DoorController] Door locked. Required key: " + requiredKeyId);
+            return false;
+        }
+
+        isUnlocked = true;
+
+        if (consumeKeyOnUnlock)
+        {
+            Debug.Log("[DoorController] Key consumption requested, but inventory has no remove method yet.");
+        }
+
+        return true;
     }
 
     private void OpenDoor()
     {
         isOpen = true;
-        doorTransform.localRotation = openedRotation;
-        Debug.Log("[DoorController] Porta aberta.");
+        isAnimating = true;
+        Debug.Log("[DoorController] Door opening.");
     }
 
     private void CloseDoor()
     {
         isOpen = false;
-        doorTransform.localRotation = closedRotation;
-        Debug.Log("[DoorController] Porta fechada.");
+        isAnimating = true;
+        Debug.Log("[DoorController] Door closing.");
+    }
+
+    private void UpdateDoorRotation()
+    {
+        Quaternion target = isOpen ? openedRotation : closedRotation;
+        doorTransform.localRotation = Quaternion.RotateTowards(
+            doorTransform.localRotation,
+            target,
+            openCloseSpeed * Time.deltaTime
+        );
+
+        if (Quaternion.Angle(doorTransform.localRotation, target) <= 0.05f)
+        {
+            doorTransform.localRotation = target;
+            isAnimating = false;
+        }
     }
 }
