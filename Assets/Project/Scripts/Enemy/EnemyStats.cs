@@ -10,7 +10,7 @@ public class EnemyStats : MonoBehaviour
     [SerializeField] private float defaultStunDuration = 3f;
     [SerializeField] private Color stunnedColor = Color.cyan;
 
-    [Header("Refer�ncias")]
+    [Header("Refer�ncias")]
     [SerializeField] private Renderer enemyRenderer;
     [SerializeField] private EnemyChase enemyChase;
 
@@ -50,6 +50,10 @@ public class EnemyStats : MonoBehaviour
 
         currentHealth -= amount;
         Debug.Log($"[ENEMY] {gameObject.name} tomou {amount} de dano. HP atual: {currentHealth}");
+
+        // Aplica hit stun leve ao levar tiro (sem afetar stun do taser)
+        if (enemyChase != null)
+            enemyChase.ApplyHitStun(0.18f); // ajuste a duração se quiser
 
         if (canDie && currentHealth <= 0f)
         {

@@ -138,6 +138,24 @@ public class NoteViewerUI : MonoBehaviour
 
         Time.timeScale = previousTimeScale;
         isOpen = false;
+
+        // Reproduz diálogo após ler a nota (se configurado)
+        if (notes != null && selectedNoteIndex >= 0 && selectedNoteIndex < notes.Count)
+        {
+            NoteData currentNote = notes[selectedNoteIndex];
+            if (currentNote != null && currentNote.hasAfterReadingLine)
+            {
+                Debug.Log("[NoteViewerUI] Reproduzindo diálogo após ler: " + currentNote.title);
+                if (DialogueManager.Instance != null)
+                {
+                    DialogueManager.Instance.PlayNoteDialogue(currentNote.afterReadingLine);
+                }
+                else
+                {
+                    Debug.LogWarning("[NoteViewerUI] DialogueManager não encontrado na cena!");
+                }
+            }
+        }
     }
 
     private void PopulateNotesList()

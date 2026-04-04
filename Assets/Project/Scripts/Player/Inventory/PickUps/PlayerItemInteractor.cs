@@ -16,6 +16,17 @@ public class PlayerItemInteractor : MonoBehaviour
 
     void HandleItemHighlight()
     {
+        // Verifica se Camera.main existe antes de usar
+        if (Camera.main == null)
+        {
+            if (currentHighlight != null)
+            {
+                currentHighlight.SetHighlight(false);
+                currentHighlight = null;
+            }
+            return;
+        }
+
         Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
         RaycastHit hit;
 

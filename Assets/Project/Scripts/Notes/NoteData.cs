@@ -28,6 +28,7 @@ public class NoteData : ScriptableObject
     {
         [TextArea(2, 4)] public string text;
         public LineKind kind;
+        public AudioClip audioClip; // Áudio opcional para dublagem
     }
 
     [Header("Diálogo em linhas (opcional)")]

@@ -3,8 +3,8 @@ using UnityEngine;
 
 public class PlayerCameraController : MonoBehaviour
 {
-    [Header("Referências")]
-    [SerializeField] private Transform cameraHolder; // pai da câmera (CameraHolder)
+    [Header("Referï¿½ncias")]
+    [SerializeField] private Transform cameraHolder; // pai da cï¿½mera (CameraHolder)
 
     [Header("Sensibilidade")]
     [SerializeField] private float mouseSensitivityX = 200f;
@@ -12,7 +12,7 @@ public class PlayerCameraController : MonoBehaviour
     [SerializeField] private float controllerSensitivityX = 150f;
     [SerializeField] private float controllerSensitivityY = 130f;
 
-    [Header("Limites de Rotação Vertical")]
+    [Header("Limites de Rotaï¿½ï¿½o Vertical")]
     [SerializeField] private float minYAngle = -30f;
     [SerializeField] private float maxYAngle = 60f;
 
@@ -41,7 +41,7 @@ public class PlayerCameraController : MonoBehaviour
         float mouseX = Input.GetAxis(mouseXInput) * mouseSensitivityX * Time.deltaTime;
         float mouseY = Input.GetAxis(mouseYInput) * mouseSensitivityY * Time.deltaTime;
 
-        // Analógico direito
+        // Analï¿½gico direito
         float stickX = Input.GetAxis(rightStickXInput) * controllerSensitivityX * Time.deltaTime;
         float stickY = Input.GetAxis(rightStickYInput) * controllerSensitivityY * Time.deltaTime;
 
@@ -51,7 +51,7 @@ public class PlayerCameraController : MonoBehaviour
         // Rotaciona o player no eixo Y (esquerda/direita)
         transform.Rotate(Vector3.up * finalX);
 
-        // Rotação vertical aplicada no cameraHolder
+        // Rotaï¿½ï¿½o vertical aplicada no cameraHolder
         rotationX -= finalY;
         rotationX = Mathf.Clamp(rotationX, minYAngle, maxYAngle);
 

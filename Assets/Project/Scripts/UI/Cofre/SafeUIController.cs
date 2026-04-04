@@ -5,27 +5,48 @@ public class SafeUIController : MonoBehaviour
 {
     public static bool IsSafeOpen { get; private set; } = false;
 
-    [Header("Referências de UI")]
-    [SerializeField] private GameObject safePanel;    // SafePanel
-    [SerializeField] private TMP_Text codeText;       // Text_Code
-    [SerializeField] private TMP_Text hintText;       // Text_Hint (opcional)
+    [Header("ReferÃªncias de UI")]
+    [SerializeField] private GameObject safePanel;
+    [SerializeField] private TMP_Text codeText;
+    [SerializeField] private TMP_Text hintText;
 
-    [Header("Configuração")]
-    [SerializeField] private int codeLength = 8;      // sempre 8 neste projeto
+    [Header("ConfiguraÃ§Ã£o")]
+    [SerializeField] private int codeLength = 8;
     [SerializeField] private char placeholderChar = '_';
 
-    [Header("Inputs")]
-    [SerializeField] private KeyCode confirmKey = KeyCode.Q;
+    [Header("Sons")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip changeNumberSound;
+    [SerializeField] private AudioClip wrongCodeSound;
+    [SerializeField] private AudioClip correctCodeSound;
+
+    [Header("Inputs (ConfigurÃ¡veis)")]
+    [SerializeField] private KeyCode increaseNumberKey = KeyCode.W;
+    [SerializeField] private KeyCode decreaseNumberKey = KeyCode.S;
+    [SerializeField] private KeyCode confirmKey = KeyCode.E;
     [SerializeField] private KeyCode cancelKey = KeyCode.Escape;
+    [SerializeField] private float navigationCooldown = 0.1f;
+
+    [Header("UI - Dica CustomizÃ¡vel")]
+    [SerializeField] private string customHintText = "A/D (Setas) = Navegar | W/S = Aumentar/Diminuir | E = Confirmar | ESC = Sair";
 
     private Safe currentSafe;
-    private string currentInput = "";
+    private int[] currentCode = new int[8];
+    private int currentPosition = 0;
+    private float navigationTimer = 0f;
     private float previousTimeScale = 1f;
+    private float openDelay = 0.1f; // Delay para evitar fechamento imediato
 
     private void Start()
     {
         if (safePanel != null)
             safePanel.SetActive(false);
+
+        for (int i = 0; i < codeLength; i++)
+            currentCode[i] = 0;
+
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
 
         UpdateCodeText();
         UpdateHintText();
@@ -36,11 +57,13 @@ public class SafeUIController : MonoBehaviour
         if (!IsSafeOpen)
             return;
 
-        HandleDigitInput();
-        HandleSpecialKeys();
-    }
+        navigationTimer -= Time.unscaledDeltaTime;
+        openDelay -= Time.unscaledDeltaTime;
 
-    // ===== Abrir / Fechar =====
+        HandleNavigation();
+        HandleNumberChange();
+        HandleConfirmCancel();
+    }
 
     public void OpenSafe(Safe safe)
     {
@@ -48,11 +71,14 @@ public class SafeUIController : MonoBehaviour
             return;
 
         currentSafe = safe;
-        currentInput = "";
+        currentPosition = 0;
+
+        for (int i = 0; i < codeLength; i++)
+            currentCode[i] = 0;
 
         if (safePanel == null)
         {
-            Debug.LogWarning("[SafeUI] safePanel não atribuído.");
+            Debug.LogWarning("[SafeUI] safePanel nao atribuido.");
             return;
         }
 
@@ -61,6 +87,8 @@ public class SafeUIController : MonoBehaviour
 
         safePanel.SetActive(true);
         IsSafeOpen = true;
+        navigationTimer = 0f;
+        openDelay = 0.1f; // Reset delay para ignorar inputs iniciais
 
         UpdateCodeText();
         UpdateHintText();
@@ -77,70 +105,88 @@ public class SafeUIController : MonoBehaviour
         Time.timeScale = previousTimeScale;
 
         currentSafe = null;
-        currentInput = "";
+        currentPosition = 0;
 
         Debug.Log("[SafeUI] UI do cofre FECHADA.");
     }
 
-    // ===== Input =====
-
-    private void HandleDigitInput()
+    private void HandleNavigation()
     {
-        // Teclas 0–9 do teclado principal
-        for (KeyCode key = KeyCode.Alpha0; key <= KeyCode.Alpha9; key++)
+        if (navigationTimer > 0f)
+            return;
+
+        int direction = 0;
+
+        if (UINavigationInput.Instance != null)
         {
-            if (Input.GetKeyDown(key))
-            {
-                char digit = (char)('0' + (key - KeyCode.Alpha0));
-                AddDigit(digit);
-                return;
-            }
+            if (UINavigationInput.Instance.RightPressedThisFrame())
+                direction = 1;
+            else if (UINavigationInput.Instance.LeftPressedThisFrame())
+                direction = -1;
+        }
+        else
+        {
+            if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+                direction = 1;
+            else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
+                direction = -1;
         }
 
-        // Teclas 0–9 do teclado numérico
-        for (KeyCode key = KeyCode.Keypad0; key <= KeyCode.Keypad9; key++)
+        if (direction != 0)
         {
-            if (Input.GetKeyDown(key))
-            {
-                char digit = (char)('0' + (key - KeyCode.Keypad0));
-                AddDigit(digit);
-                return;
-            }
+            currentPosition = (currentPosition + direction + codeLength) % codeLength;
+            PlaySound(changeNumberSound);
+            UpdateCodeText();
+            navigationTimer = navigationCooldown;
         }
     }
 
-    private void HandleSpecialKeys()
+    private void HandleNumberChange()
     {
-        // Backspace apaga último dígito
-        if (Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Delete))
+        // Ignora inputs no primeiro frame apÃ³s abrir
+        if (openDelay > 0f)
+            return;
+
+        int numberDirection = 0;
+
+        if (UINavigationInput.Instance != null)
         {
-            if (currentInput.Length > 0)
-            {
-                currentInput = currentInput.Substring(0, currentInput.Length - 1);
-                UpdateCodeText();
-            }
+            if (UINavigationInput.Instance.UpPressedThisFrame())
+                numberDirection = 1;
+            else if (UINavigationInput.Instance.DownPressedThisFrame())
+                numberDirection = -1;
+        }
+        else
+        {
+            if (Input.GetKeyDown(increaseNumberKey))
+                numberDirection = 1;
+            else if (Input.GetKeyDown(decreaseNumberKey))
+                numberDirection = -1;
         }
 
-        // Confirmar com Q ou Enter
-        if (Input.GetKeyDown(confirmKey) || Input.GetKeyDown(KeyCode.Return))
+        if (numberDirection != 0)
+        {
+            currentCode[currentPosition] = (currentCode[currentPosition] + numberDirection + 10) % 10;
+            PlaySound(changeNumberSound);
+            UpdateCodeText();
+        }
+    }
+
+    private void HandleConfirmCancel()
+    {
+        // Ignora inputs no primeiro frame apÃ³s abrir
+        if (openDelay > 0f)
+            return;
+
+        if (Input.GetKeyDown(confirmKey))
         {
             ConfirmCode();
         }
 
-        // Cancelar com ESC
         if (Input.GetKeyDown(cancelKey))
         {
             CloseSafe();
         }
-    }
-
-    private void AddDigit(char digit)
-    {
-        if (currentInput.Length >= codeLength)
-            return;
-
-        currentInput += digit;
-        UpdateCodeText();
     }
 
     private void ConfirmCode()
@@ -152,39 +198,50 @@ public class SafeUIController : MonoBehaviour
             return;
         }
 
-        if (currentInput.Length != codeLength)
-        {
-            Debug.Log("[SafeUI] Código incompleto. Precisa de " + codeLength + " dígitos.");
-            return;
-        }
+        string codeString = "";
+        for (int i = 0; i < codeLength; i++)
+            codeString += currentCode[i].ToString();
 
         string correct = currentSafe.GetCorrectCode();
 
-        if (currentInput == correct)
+        if (codeString == correct)
         {
+            PlaySound(correctCodeSound);
             currentSafe.OnCorrectCodeEntered();
             CloseSafe();
         }
         else
         {
+            PlaySound(wrongCodeSound);
             currentSafe.OnWrongCodeEntered();
-            currentInput = "";
+            for (int i = 0; i < codeLength; i++)
+                currentCode[i] = 0;
+            currentPosition = 0;
             UpdateCodeText();
         }
     }
 
-    // ===== UI =====
+    private void PlaySound(AudioClip clip)
+    {
+        if (clip == null || audioSource == null)
+            return;
+
+        audioSource.clip = clip;
+        audioSource.PlayOneShot(clip);
+    }
 
     private void UpdateCodeText()
     {
         if (codeText == null)
             return;
 
-        // Ex: "12__5___" até 8 caracteres
-        string display = currentInput;
-        while (display.Length < codeLength)
+        string display = "";
+        for (int i = 0; i < codeLength; i++)
         {
-            display += placeholderChar;
+            if (i == currentPosition)
+                display += "[" + currentCode[i] + "]";
+            else
+                display += currentCode[i];
         }
 
         codeText.text = display;
@@ -195,7 +252,6 @@ public class SafeUIController : MonoBehaviour
         if (hintText == null)
             return;
 
-        hintText.text = $"Digite {codeLength} dígitos.\n" +
-                        "0–9 = inserir | Backspace = apagar | Q/Enter = confirmar | ESC = sair";
+        hintText.text = customHintText;
     }
 }

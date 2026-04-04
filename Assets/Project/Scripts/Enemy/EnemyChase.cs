@@ -4,6 +4,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyChase : MonoBehaviour
 {
+    private Coroutine hitStunCoroutine;
     [Header("Referências")]
     [Tooltip("Alvo a ser perseguido (Player). Se vazio, procura por tag 'Player'.")]
     [SerializeField] private Transform target;
@@ -101,5 +102,24 @@ public class EnemyChase : MonoBehaviour
         isStunned = value;
         if (agent == null || !agent.enabled || !agent.isOnNavMesh) return;
         agent.isStopped = value;
+    }
+
+    /// <summary>
+    /// Aplica um "hit stun" curto, sem afetar o stun do taser.
+    /// </summary>
+    /// <param name="duration">Duração do hit stun em segundos (ex: 0.2f)</param>
+    public void ApplyHitStun(float duration)
+    {
+        if (hitStunCoroutine != null)
+            StopCoroutine(hitStunCoroutine);
+        hitStunCoroutine = StartCoroutine(HitStunRoutine(duration));
+    }
+
+    private System.Collections.IEnumerator HitStunRoutine(float duration)
+    {
+        bool wasStunned = isStunned;
+        if (!wasStunned) SetStunned(true);
+        yield return new WaitForSeconds(duration);
+        if (!wasStunned) SetStunned(false);
     }
 }

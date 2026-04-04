@@ -33,8 +33,8 @@ public class WeaponController : MonoBehaviour
     [SerializeField] private KeyCode switchToTaserKey = KeyCode.Alpha2;
 
     [Header("HUD")]
-    [SerializeField] private Image taserIconHUD; // arraste o objeto TaserIcon aqui no Inspector
-    [SerializeField] private Image pistolIconHUD; // arraste o objeto PistolIcon aqui no Inspector
+    [SerializeField] private GameObject taserPanelHUD; // arraste o painel do Taser aqui no Inspector
+    [SerializeField] private GameObject pistolPanelHUD; // arraste o painel da Pistola aqui no Inspector
 
     [Header("Áudio")]
     [SerializeField] private AudioSource audioSource;
@@ -48,17 +48,22 @@ public class WeaponController : MonoBehaviour
     private int ignoreHintTriggerMask;
 
     private void Start()
-    {
-        if (playerCamera == null)
-            playerCamera = Camera.main;
+{
+    if (pistolPanelHUD != null)
+        pistolPanelHUD.SetActive(false); // Garante que começa desativado
 
-        if (playerInventory == null)
-            playerInventory = GetComponentInParent<PlayerInventory>();
+    UpdateWeaponHUD();
 
-        ignoreHintTriggerMask = ~(1 << LayerMask.NameToLayer("HintTrigger"));
+    if (playerCamera == null)
+        playerCamera = Camera.main;
 
-        UpdateWeaponHUD();
-    }
+    if (playerInventory == null)
+        playerInventory = GetComponentInParent<PlayerInventory>();
+
+    ignoreHintTriggerMask = ~(1 << LayerMask.NameToLayer("HintTrigger"));
+
+    UpdateWeaponHUD();
+}
 
     private void Update()
     {
@@ -99,13 +104,13 @@ public class WeaponController : MonoBehaviour
     }
 
     private void UpdateWeaponHUD()
-    {
-        if (taserIconHUD != null)
-            taserIconHUD.enabled = (currentMode == WeaponMode.Taser);
+{
+    if (taserPanelHUD != null)
+        taserPanelHUD.SetActive(currentMode == WeaponMode.Taser);
 
-        if (pistolIconHUD != null)
-            pistolIconHUD.enabled = (hasPistol && currentMode == WeaponMode.Pistol);
-    }
+    if (pistolPanelHUD != null)
+        pistolPanelHUD.SetActive(hasPistol && currentMode == WeaponMode.Pistol);
+}
 
     // Chame este método quando o player pegar a arma na cena
     public void OnPickupPistol()
@@ -150,6 +155,10 @@ public class WeaponController : MonoBehaviour
             Debug.Log("[WeaponController] Pistola disparada! Munição restante: " + playerInventory.GetAmmoCount());
             if (weaponFX != null)
                 weaponFX.PlayShotEffects();
+
+            // TOCA O SOM DO TIRO
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX2D("Gunshot");
 
             // Raycast para acertar inimigos/objetos
             Ray ray = playerCamera.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2, 0));

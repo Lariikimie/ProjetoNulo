@@ -22,7 +22,8 @@ MonoBehaviour:
   speechColor: {r: 1, g: 1, b: 1, a: 1}
   thoughtColor: {r: 1, g: 1, b: 1, a: 0.9}
   thoughtItalic: 1
-  hasAfterReadingLine: 0
+  hasAfterReadingLine: 1
   afterReadingLine:
-    text: 
-    kind: 0
+    text: 'Teste teste teste pensamento '
+    kind: 1
+    audioClip: {fileID: 0}

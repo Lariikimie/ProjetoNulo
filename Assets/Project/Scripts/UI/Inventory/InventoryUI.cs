@@ -5,27 +5,30 @@ using TMPro;
 
 public class InventoryUI : MonoBehaviour
 {
-    public static bool IsInventoryOpen = false;   // usado pelo PauseMenu para bloquear, se quiser
+    public static bool IsInventoryOpen = false;
 
     [Header("Referências principais")]
-    [SerializeField] private GameObject inventoryPanel;     // InventoryPanel
+    [SerializeField] private GameObject inventoryPanel;
     [SerializeField] private PlayerInventory playerInventory;
     [SerializeField] private NoteViewerUI noteViewerUI;
+
+    [Header("Tutorial")]
+    [SerializeField] private GameObject inventoryTutorialText;
 
     [Header("Hotbar")]
     [SerializeField] private List<HotbarSlotUI> hotbarSlots = new List<HotbarSlotUI>();
 
     [Header("UI – Lado Esquerdo")]
     [SerializeField] private TMP_Text keysListText;
-    [SerializeField] private TMP_Text batteryCountText;     // pode ficar null, não causa erro
+    [SerializeField] private TMP_Text batteryCountText;
 
     [Header("UI – Lista de Notas")]
-    [SerializeField] private Transform notesListContainer;   // NotesListContainer
-    [SerializeField] private GameObject noteButtonPrefab;    // Prefab com Button + Text/TMP
+    [SerializeField] private Transform notesListContainer;
+    [SerializeField] private GameObject noteButtonPrefab;
 
     [Header("Inputs (abrir/fechar e fallback)")]
     [SerializeField] private KeyCode openInventoryKey = KeyCode.Tab;
-    [SerializeField] private KeyCode closeInventoryKey = KeyCode.Tab; // ESC ou Tab – configurável
+    [SerializeField] private KeyCode closeInventoryKey = KeyCode.Tab;
 
     [Tooltip("Tecla de usar item (fallback caso não exista UINavigationInput na cena).")]
     [SerializeField] private KeyCode useItemKey = KeyCode.Q;
@@ -51,6 +54,9 @@ public class InventoryUI : MonoBehaviour
         else
             Debug.LogError("[InventoryUI] InventoryPanel NÃO atribuído no Inspector!");
 
+        if (inventoryTutorialText != null)
+            inventoryTutorialText.SetActive(false);
+
         if (playerInventory == null)
             Debug.LogWarning("[InventoryUI] PlayerInventory NÃO atribuído no Inspector.");
         if (noteViewerUI == null)
@@ -63,27 +69,23 @@ public class InventoryUI : MonoBehaviour
         Debug.Log("[InventoryUI] Start() concluído. Painel inicial desativado.");
     }
 
-
     private void Update()
     {
         if (GameManager.Instance != null && GameManager.Instance.IsPaused && !IsOpen)
-        return;
+            return;
         HandleOpenCloseInput();
 
         if (!IsOpen)
             return;
         if (noteViewerUI != null && noteViewerUI.IsOpen())
-        return;
+            return;
 
         HandleNavigationInput();
         HandleUseItemInput();
     }
 
-    // ───────────────────────────────── ABRIR / FECHAR ─────────────────────────────────
-
     private void HandleOpenCloseInput()
     {
-        // Toggle pela tecla de abrir
         if (Input.GetKeyDown(openInventoryKey))
         {
             if (!IsOpen) OpenInventory();
@@ -91,8 +93,7 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        // Fechar explicitamente (ESC/Tab – você decide no Inspector)
-        if (Input.GetKeyDown(closeInventoryKey))
+        if (Input.GetKeyDown(closeInventoryKey) || Input.GetKeyDown(KeyCode.Escape))
         {
             if (IsOpen) CloseInventory();
         }
@@ -106,7 +107,6 @@ public class InventoryUI : MonoBehaviour
             return;
         }
 
-        // Pergunta ao UIPanelManager se pode abrir o Inventário
         if (UIPanelManager.Instance != null)
         {
             if (!UIPanelManager.Instance.TryOpen(UIPanelType.Inventory))
@@ -120,13 +120,33 @@ public class InventoryUI : MonoBehaviour
         inventoryPanel.SetActive(true);
         previousTimeScale = Time.timeScale;
         Time.timeScale = 0f;
-
         IsInventoryOpen = true;
+
+        Debug.Log("[InventoryUI] Inventário ABERTO - Fluxo de dicas iniciado");
+
+        // FLUXO DE DICAS: ao abrir o inventário, destrói a dica da HUD e ativa a dica do inventário
+        if (HintManager.Instance != null)
+        {
+            bool shouldShowUseHint = !HintManager.Instance.HasHintBeenShown("abrir_inventario");
+            
+            if (shouldShowUseHint)
+            {
+                Debug.Log("[InventoryUI] Destruindo dica 'abrir_inventario' e mostrando 'usar_pilha'");
+                HintManager.Instance.MarkHintAsShown("abrir_inventario");
+                HintManager.Instance.ShowHint("usar_pilha");
+            }
+            else
+            {
+                Debug.Log("[InventoryUI] Dica 'abrir_inventario' já foi mostrada antes");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[InventoryUI] HintManager.Instance é NULL!");
+        }
 
         if (hotbarSlots.Count > 0)
             currentIndex = Mathf.Clamp(currentIndex, 0, hotbarSlots.Count - 1);
-
-        Debug.Log($"[InventoryUI] Inventário ABERTO. TimeScale antes={previousTimeScale}, depois={Time.timeScale}");
 
         RefreshLeftPanel();
         RefreshAllSlots();
@@ -143,7 +163,11 @@ public class InventoryUI : MonoBehaviour
 
         IsInventoryOpen = false;
 
-        // Informa o UIPanelManager que o inventário foi fechado
+        // Destroi ou desativa o texto de tutorial do inventário, se estiver ativo
+       if (inventoryTutorialText != null && inventoryTutorialText.activeSelf)
+{
+    Destroy(inventoryTutorialText); // ou inventoryTutorialText.SetActive(false);
+}
         if (UIPanelManager.Instance != null)
         {
             UIPanelManager.Instance.Close(UIPanelType.Inventory);
@@ -280,31 +304,31 @@ public class InventoryUI : MonoBehaviour
         Debug.Log($"[InventoryUI] Slot atual index={currentIndex}, tipo={slot.ItemType}");
 
         switch (slot.ItemType)
-{
-    case HotbarItemType.Battery:
-        UseBatteryFromSlot(slot);
-        break;
+        {
+            case HotbarItemType.Battery:
+                UseBatteryFromSlot(slot);
+                break;
 
-    case HotbarItemType.Health:
-        bool used = playerInventory.UseHealthItem();
-        if (!used)
-            Debug.Log("[InventoryUI] Tentativa de usar cura, mas não há itens de cura.");
-        else
-            slot.UpdateQuantity(playerInventory.GetHealthItemCount());
-        break;
+            case HotbarItemType.Health:
+                bool used = playerInventory.UseHealthItem();
+                if (!used)
+                    Debug.Log("[InventoryUI] Tentativa de usar cura, mas não há itens de cura.");
+                else
+                    slot.UpdateQuantity(playerInventory.GetHealthItemCount());
+                break;
 
-    case HotbarItemType.Notes:
-        slot.OpenNotePanelFromSlot();
-        break;
+            case HotbarItemType.Notes:
+                slot.OpenNotePanelFromSlot();
+                break;
 
-    case HotbarItemType.NotesCamera:
-        slot.OpenNoteCineFromSlot();
-        break;
+            case HotbarItemType.NotesCamera:
+                slot.OpenNoteCineFromSlot();
+                break;
 
-    default:
-        Debug.Log("[InventoryUI] Slot sem item configurado (ItemType=None ou outro).");
-        break;
-}
+            default:
+                Debug.Log("[InventoryUI] Slot sem item configurado (ItemType=None ou outro).");
+                break;
+        }
     }
 
     private void UseBatteryFromSlot(HotbarSlotUI slot)
@@ -327,6 +351,25 @@ public class InventoryUI : MonoBehaviour
         UpdateBatteryText();
 
         Debug.Log($"[InventoryUI] Pilha usada. Novas pilhas no inventário: {newCount}");
+
+        // FLUXO DE DICAS: Ao usar pilha, destrói a dica de uso
+        if (HintManager.Instance != null)
+        {
+            if (!HintManager.Instance.HasHintBeenShown("usar_pilha"))
+            {
+                Debug.Log("[InventoryUI] Destruindo dica 'usar_pilha'");
+                HintManager.Instance.MarkHintAsShown("usar_pilha");
+                Debug.Log("[InventoryUI] Dica 'usar_pilha' marcada como mostrada");
+            }
+            else
+            {
+                Debug.Log("[InventoryUI] Dica 'usar_pilha' já foi mostrada anteriormente");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[InventoryUI] HintManager.Instance é NULL!");
+        }
     }
 
     // ───────────────────────────────── ATUALIZAÇÃO DO LADO ESQUERDO ─────────────────────────────────

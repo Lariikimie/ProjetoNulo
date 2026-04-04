@@ -155,6 +155,10 @@ public class FlashlightController : MonoBehaviour
         currentBattery += amount;
         currentBattery = Mathf.Clamp(currentBattery, 0f, maxBattery);
 
+        // Toca som de recarregar pilha/lanterna
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX2D("ColocarPilhasTaser");
+
         // Se tiver bateria de novo, podemos ligar a lanterna
         if (currentBattery > 0f && !isOn)
         {

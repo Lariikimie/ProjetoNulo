@@ -4,23 +4,21 @@ using TMPro;
 public class HintTrigger : MonoBehaviour
 {
     [Header("Configuração da Dica")]
+    [Tooltip("ID da dica para o HintManager (ex: 'Hint_Moviment', 'Hint_Lanterna')")]
+    [SerializeField] private string hintId = "Hint_Moviment";
+
     [Tooltip("Texto que será exibido quando o player entrar neste trigger.")]
     [TextArea(2, 5)]
     [SerializeField] private string hintMessage = "Texto da dica aqui";
 
-    [Header("Referências de UI (mesmo painel para tudo)")]
-    [Tooltip("Painel de dica (HintPanel) que já existe no Canvas_HUD.")]
+    [Header("Referências de UI (opcional, se quiser mostrar texto localmente também)")]
     [SerializeField] private GameObject hintPanel;
-
-    [Tooltip("Texto da dica (Text_Hint - TextMeshProUGUI).")]
     [SerializeField] private TMP_Text hintText;
 
-    // Contador de colliders do Player dentro do trigger
     private int playerCollidersInside = 0;
 
     private void Reset()
     {
-        // Tenta achar automaticamente (só funciona se o painel estiver ATIVO na cena)
         if (hintPanel == null)
         {
             GameObject panel = GameObject.Find("HintPanel");
@@ -36,11 +34,8 @@ public class HintTrigger : MonoBehaviour
 
     private void Start()
     {
-        // Garante que o painel COMEÇA desativado
         if (hintPanel != null)
-        {
             hintPanel.SetActive(false);
-        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -48,46 +43,51 @@ public class HintTrigger : MonoBehaviour
         if (!other.CompareTag("Player"))
             return;
 
+        // Chama o HintManager para mostrar a dica (apenas se ainda não foi mostrada)
+        if (HintManager.Instance != null)
+            HintManager.Instance.ShowHint(hintId);
+
         playerCollidersInside++;
         if (playerCollidersInside == 1)
         {
-            ShowHint();
+            ShowHintLocal();
         }
     }
 
-     private void OnTriggerExit(Collider other)
-     {
-         if (!other.CompareTag("Player"))
-             return;
+    private void OnTriggerExit(Collider other)
+{
+    if (!other.CompareTag("Player"))
+        return;
 
-        playerCollidersInside--;
-         if (playerCollidersInside <= 0)
-        {
-            playerCollidersInside = 0;
-             HideHint(); // 🔥 só desativa quando TODOS os colliders saírem
-        }
-    }
-
-    private void ShowHint()
+    playerCollidersInside--;
+    if (playerCollidersInside <= 0)
     {
-        if (hintPanel == null || hintText == null)
+        playerCollidersInside = 0;
+        HideHintLocal();
+
+        // Marca como mostrado e destrói o objeto associado
+        if (HintManager.Instance != null)
+            HintManager.Instance.MarkHintAsShown(hintId);
+    }
+}
+
+    // Exibe o painel local (opcional, se quiser mostrar texto na tela além do HintManager)
+    private void ShowHintLocal()
+    {
+        if (hintPanel != null && hintText != null)
         {
-            Debug.LogWarning("[HintTrigger] HintPanel ou HintText não configurados no Inspector.");
-            return;
+            hintText.text = hintMessage;
+            hintPanel.SetActive(true);
+            Debug.Log("[HintTrigger] Mostrando dica local: " + hintMessage);
         }
-
-        hintText.text = hintMessage;
-        hintPanel.SetActive(true);   // 🔥 ativa, mesmo se estava desligado na cena
-
-        Debug.Log("[HintTrigger] Mostrando dica: " + hintMessage);
     }
 
-    private void HideHint()
+    private void HideHintLocal()
     {
-        if (hintPanel == null)
-            return;
-
-        hintPanel.SetActive(false);  // 🔥 desativa sempre que sair da área
-        Debug.Log("[HintTrigger] Escondendo dica.");
+        if (hintPanel != null)
+        {
+            hintPanel.SetActive(false);
+            Debug.Log("[HintTrigger] Escondendo dica local.");
+        }
     }
 }

@@ -3,18 +3,24 @@ using TMPro;
 
 public class Safe : MonoBehaviour
 {
-    [Header("Identificação do Cofre")]
+    [Header("Identificaï¿½ï¿½o do Cofre")]
     [SerializeField] private string safeName = "Cofre";
 
-    [Header("Senha do Cofre (8 dígitos)")]
+    [Header("Senha do Cofre (8 dï¿½gitos)")]
     [SerializeField] private string correctCode = "12345678";
 
     [Header("UI de Dica (opcional)")]
     [SerializeField] private GameObject hintPanel;   // painel "Pressione E..."
     [SerializeField] private TMP_Text hintText;      // texto da dica
 
-    [Header("Referência à UI do Cofre")]
+    [Header("Referï¿½ncia ï¿½ UI do Cofre")]
     [SerializeField] private SafeUIController safeUIController;
+
+    [Header("Itens dentro do Cofre")]
+    [SerializeField] private GameObject[] itemsToActivate; // Items desativados que serao ativados
+
+    [Header("Modelo do Cofre (opcional)")]
+    [SerializeField] private GameObject safeModelGameObject; // Arraste o modelo visual do cofre aqui
 
     private bool playerInRange = false;
     private bool isOpen = false;
@@ -27,14 +33,14 @@ public class Safe : MonoBehaviour
         // Verificar tamanho da senha
         if (correctCode.Length != 8)
         {
-            Debug.LogWarning($"[Safe:{safeName}] A senha não tem 8 dígitos. Valor atual: '{correctCode}'");
+            Debug.LogWarning($"[Safe:{safeName}] A senha nï¿½o tem 8 dï¿½gitos. Valor atual: '{correctCode}'");
         }
 
-        // Conferir se o collider é trigger
+        // Conferir se o collider ï¿½ trigger
         Collider col = GetComponent<Collider>();
         if (col == null)
         {
-            Debug.LogWarning($"[Safe:{safeName}] NÃO há Collider neste GameObject. O OnTriggerEnter nunca será chamado.");
+            Debug.LogWarning($"[Safe:{safeName}] Nï¿½O hï¿½ Collider neste GameObject. O OnTriggerEnter nunca serï¿½ chamado.");
         }
         else
         {
@@ -44,21 +50,21 @@ public class Safe : MonoBehaviour
         if (hintPanel != null)
         {
             hintPanel.SetActive(false);
-            Debug.Log($"[Safe:{safeName}] HintPanel atribuído e desativado no Start.");
+            Debug.Log($"[Safe:{safeName}] HintPanel atribuï¿½do e desativado no Start.");
         }
         else
         {
-            Debug.LogWarning($"[Safe:{safeName}] HintPanel NÃO atribuído no Inspector.");
+            Debug.LogWarning($"[Safe:{safeName}] HintPanel Nï¿½O atribuï¿½do no Inspector.");
         }
 
         if (hintText == null)
         {
-            Debug.LogWarning($"[Safe:{safeName}] HintText NÃO atribuído no Inspector.");
+            Debug.LogWarning($"[Safe:{safeName}] HintText Nï¿½O atribuï¿½do no Inspector.");
         }
 
         if (safeUIController == null)
         {
-            Debug.LogWarning($"[Safe:{safeName}] SafeUIController NÃO atribuído no Inspector.");
+            Debug.LogWarning($"[Safe:{safeName}] SafeUIController Nï¿½O atribuï¿½do no Inspector.");
         }
     }
 
@@ -78,12 +84,12 @@ public class Safe : MonoBehaviour
 
         if (!other.CompareTag("Player"))
         {
-            Debug.Log($"[Safe:{safeName}] OnTriggerEnter ignorado. Tag não é Player.");
+            Debug.Log($"[Safe:{safeName}] OnTriggerEnter ignorado. Tag nï¿½o ï¿½ Player.");
             return;
         }
 
         playerInRange = true;
-        Debug.Log($"[Safe:{safeName}] Player ENTROU na área do cofre. playerInRange = true");
+        Debug.Log($"[Safe:{safeName}] Player ENTROU na ï¿½rea do cofre. playerInRange = true");
         ShowHint(true);
     }
 
@@ -93,12 +99,12 @@ public class Safe : MonoBehaviour
 
         if (!other.CompareTag("Player"))
         {
-            Debug.Log($"[Safe:{safeName}] OnTriggerExit ignorado. Tag não é Player.");
+            Debug.Log($"[Safe:{safeName}] OnTriggerExit ignorado. Tag nï¿½o ï¿½ Player.");
             return;
         }
 
         playerInRange = false;
-        Debug.Log($"[Safe:{safeName}] Player SAIU da área do cofre. playerInRange = false");
+        Debug.Log($"[Safe:{safeName}] Player SAIU da ï¿½rea do cofre. playerInRange = false");
         ShowHint(false);
     }
 
@@ -113,7 +119,7 @@ public class Safe : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[Safe:{safeName}] HintPanel é nulo. Não foi possível SetActive.");
+            Debug.LogWarning($"[Safe:{safeName}] HintPanel ï¿½ nulo. Nï¿½o foi possï¿½vel SetActive.");
         }
 
         if (show && hintText != null)
@@ -127,7 +133,7 @@ public class Safe : MonoBehaviour
     {
         if (safeUIController == null)
         {
-            Debug.LogWarning($"[Safe:{safeName}] Não foi possível abrir UI do cofre. SafeUIController é nulo.");
+            Debug.LogWarning($"[Safe:{safeName}] Nï¿½o foi possï¿½vel abrir UI do cofre. SafeUIController ï¿½ nulo.");
             return;
         }
 
@@ -136,7 +142,7 @@ public class Safe : MonoBehaviour
         ShowHint(false);
     }
 
-    // ===== Métodos usados pela UI =====
+    // ===== Mï¿½todos usados pela UI =====
 
     public string GetCorrectCode()
     {
@@ -147,21 +153,46 @@ public class Safe : MonoBehaviour
     public void OnCorrectCodeEntered()
     {
         isOpen = true;
-        Debug.Log($"[Safe:{safeName}] CÓDIGO CORRETO! Cofre aberto.");
+        Debug.Log($"[Safe:{safeName}] Cï¿½DIGO CORRETO! Cofre aberto.");
 
-        // Desativa o collider para não disparar mais trigger
-        Collider col = GetComponent<Collider>();
-        if (col != null)
+        // Ativa os items desativados
+        if (itemsToActivate != null && itemsToActivate.Length > 0)
         {
-            col.enabled = false;
-            Debug.Log($"[Safe:{safeName}] Collider desativado após abrir cofre.");
+            foreach (GameObject item in itemsToActivate)
+            {
+                if (item != null)
+                {
+                    item.SetActive(true);
+                    Debug.Log($"[Safe:{safeName}] Item ativado: {item.name}");
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[Safe:{safeName}] Nenhum item configurado para ativar!");
         }
 
-        // Aqui você pode colocar animação, spawn de item, etc.
+        // Aguarda um pouco antes de destruir (para permitir animaÃ§Ãµes, sons, etc)
+        Invoke(nameof(DestroyThis), 0.5f);
+    }
+
+    private void DestroyThis()
+    {
+        Debug.Log($"[Safe:{safeName}] Destruindo cofre.");
+
+        // DestrÃ³i o modelo visual se estiver atribuÃ­do
+        if (safeModelGameObject != null)
+        {
+            Debug.Log($"[Safe:{safeName}] Destruindo modelo: {safeModelGameObject.name}");
+            Destroy(safeModelGameObject);
+        }
+
+        // DestrÃ³i o trigger/collider (este GameObject)
+        Destroy(gameObject);
     }
 
     public void OnWrongCodeEntered()
     {
-        Debug.Log($"[Safe:{safeName}] Código ERRADO. Cofre permanece fechado.");
+        Debug.Log($"[Safe:{safeName}] Cï¿½digo ERRADO. Cofre permanece fechado.");
     }
 }
