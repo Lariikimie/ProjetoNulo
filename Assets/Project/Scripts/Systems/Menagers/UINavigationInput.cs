@@ -1,17 +1,17 @@
 using UnityEngine;
 
 /// <summary>
-/// Gerencia as entradas de navegação de UI (esquerda/direita/cima/baixo,
-/// confirmar e cancelar), com tudo configurável via Inspector.
+/// Gerencia as entradas de navegaï¿½ï¿½o de UI (esquerda/direita/cima/baixo,
+/// confirmar e cancelar), com tudo configurï¿½vel via Inspector.
 /// 
-/// Painéis como InventoryUI, PauseMenuController, MainMenuController
-/// chamam os métodos deste script em vez de ler Input direto.
+/// Painï¿½is como InventoryUI, PauseMenuController, MainMenuController
+/// chamam os mï¿½todos deste script em vez de ler Input direto.
 /// </summary>
 public class UINavigationInput : MonoBehaviour
 {
     public static UINavigationInput Instance { get; private set; }
 
-    [Header("Teclas de navegação (teclado)")]
+    [Header("Teclas de navegaï¿½ï¿½o (teclado)")]
     [SerializeField] private KeyCode leftKey1 = KeyCode.A;
     [SerializeField] private KeyCode leftKey2 = KeyCode.LeftArrow;
 
@@ -31,27 +31,34 @@ public class UINavigationInput : MonoBehaviour
     [Tooltip("Nome do eixo vertical de UI no Input Manager (ex.: UI_Vertical).")]
     [SerializeField] private string verticalUIAxis = "UI_Vertical";
 
-    [Tooltip("Valor mínimo do eixo para considerar como navegação (0.5 recomendado).")]
+    [Tooltip("Valor mï¿½nimo do eixo para considerar como navegaï¿½ï¿½o (0.5 recomendado).")]
     [SerializeField] private float axisThreshold = 0.5f;
 
-    [Header("Botões de ação")]
+    [Header("Botï¿½es de aï¿½ï¿½o")]
     [Tooltip("Tecla de confirmar no teclado (ex.: Q, Enter, Space).")]
     [SerializeField] private KeyCode confirmKeyKeyboard = KeyCode.Q;
 
-    [Tooltip("Botão de confirmar no controle (mapeado no Input Manager, ex.: Submit).")]
+    [Tooltip("Botï¿½o de confirmar no controle (mapeado no Input Manager, ex.: Submit).")]
     [SerializeField] private string confirmButtonGamepad = "Submit";
 
     [Tooltip("Tecla de cancelar/voltar no teclado (ex.: Escape, Backspace).")]
     [SerializeField] private KeyCode cancelKeyKeyboard = KeyCode.Escape;
 
-    [Tooltip("Botão de cancelar/voltar no controle (ex.: Cancel, B).")]
+    [Tooltip("Botï¿½o de cancelar/voltar no controle (ex.: Cancel, B).")]
     [SerializeField] private string cancelButtonGamepad = "Cancel";
 
-    // Controle interno para evitar repetição quando o eixo fica segurado
+    [Header("Interaï¿½ï¿½o de gameplay")]
+    [Tooltip("Tecla de interaï¿½ï¿½o no teclado (ex.: E).")]
+    [SerializeField] private KeyCode interactKeyKeyboard = KeyCode.E;
+
+    [Tooltip("Botï¿½o de interaï¿½ï¿½o no controle (ex.: Submit).")]
+    [SerializeField] private string interactButtonGamepad = "Submit";
+
+    // Controle interno para evitar repetiï¿½ï¿½o quando o eixo fica segurado
     private bool horizontalAxisInUse = false;
     private bool verticalAxisInUse = false;
 
-    // Flags para desativar uso de eixo caso o Input Manager não tenha o axis
+    // Flags para desativar uso de eixo caso o Input Manager nï¿½o tenha o axis
     private bool horizontalAxisAvailable = true;
     private bool verticalAxisAvailable = true;
 
@@ -59,7 +66,7 @@ public class UINavigationInput : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Debug.LogWarning("[UINavigationInput] Já existe uma instância, destruindo duplicata.");
+            Debug.LogWarning("[UINavigationInput] Jï¿½ existe uma instï¿½ncia, destruindo duplicata.");
             Destroy(gameObject);
             return;
         }
@@ -69,7 +76,7 @@ public class UINavigationInput : MonoBehaviour
         // DontDestroyOnLoad(gameObject);
     }
 
-    // ------------------ MÉTODOS PÚBLICOS PARA OS PAINÉIS ------------------
+    // ------------------ Mï¿½TODOS Pï¿½BLICOS PARA OS PAINï¿½IS ------------------
 
     public bool LeftPressedThisFrame()
     {
@@ -198,6 +205,15 @@ public class UINavigationInput : MonoBehaviour
         return key || btn;
     }
 
+    public bool InteractPressedThisFrame()
+    {
+        bool key = Input.GetKeyDown(interactKeyKeyboard);
+        bool btn = !string.IsNullOrEmpty(interactButtonGamepad) &&
+                   Input.GetButtonDown(interactButtonGamepad);
+
+        return key || btn;
+    }
+
     // ------------------ LEITURA SEGURA DE EIXOS ------------------
 
     private float GetHorizontalAxisSafe()
@@ -211,7 +227,7 @@ public class UINavigationInput : MonoBehaviour
         }
         catch (System.ArgumentException e)
         {
-            Debug.LogWarning($"[UINavigationInput] Axis '{horizontalUIAxis}' não está configurado no Input Manager. Desativando uso de eixo horizontal para UI.\n{e.Message}");
+            Debug.LogWarning($"[UINavigationInput] Axis '{horizontalUIAxis}' nï¿½o estï¿½ configurado no Input Manager. Desativando uso de eixo horizontal para UI.\n{e.Message}");
             horizontalAxisAvailable = false;
             return 0f;
         }
@@ -228,7 +244,7 @@ public class UINavigationInput : MonoBehaviour
         }
         catch (System.ArgumentException e)
         {
-            Debug.LogWarning($"[UINavigationInput] Axis '{verticalUIAxis}' não está configurado no Input Manager. Desativando uso de eixo vertical para UI.\n{e.Message}");
+            Debug.LogWarning($"[UINavigationInput] Axis '{verticalUIAxis}' nï¿½o estï¿½ configurado no Input Manager. Desativando uso de eixo vertical para UI.\n{e.Message}");
             verticalAxisAvailable = false;
             return 0f;
         }
